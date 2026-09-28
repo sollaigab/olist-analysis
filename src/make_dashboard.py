@@ -320,12 +320,32 @@ def build_figures() -> tuple[dict, dict, dict]:
                       "<br>%{customdata[0]:,} people"
                       "<br>%{customdata[1]:.2f}%% of orders · %{customdata[2]:.2f}%% of item value"
                       "<extra></extra>"))
-    fig.update_layout(bargap=0.5)
+    fig.update_layout(bargap=0.34)
     fig.update_xaxes(title="Orders placed by the same person")
     fig.update_yaxes(title="Share of customers", ticksuffix="%")
     register("orders-per-customer", fig, per_customer,
              "96.96% of customers placed exactly one order. There are 99,441 customer_id values "
              "but 96,096 people behind them, which is why customer counts use customer_unique_id.")
+
+    # Same buckets, three shares side by side: the point is that they barely
+    # differ, so repeat buyers are not carrying a disproportionate share.
+    fig = go.Figure()
+    for i, (col, label) in enumerate([("pct_of_customers", "customers"),
+                                      ("pct_of_orders", "orders"),
+                                      ("pct_of_items_value", "item value")]):
+        fig.add_trace(go.Bar(
+            x=agg["bucket"], y=agg[col], name=label,
+            meta=dict(role=["series1", "series2", "muted"][i]),
+            hovertemplate="<b>%{x} order(s)</b><br>" + label
+                          + ": <b>%{y:.2f}%%</b><extra></extra>"))
+    fig.update_layout(barmode="group", showlegend=True, bargap=0.28,
+                      legend=dict(orientation="h", y=-0.24, x=0))
+    fig.update_xaxes(title="Orders placed by the same person")
+    fig.update_yaxes(title="Share of the total", ticksuffix="%")
+    register("value-concentration", fig, agg,
+             "One-time buyers are 96.96% of customers, 93.78% of orders and 94.44% of item "
+             "value. The three shares track each other, so repeat buyers are not worth "
+             "disproportionately more per head - there are simply very few of them.")
 
     return figs, tables, notes
 
@@ -379,31 +399,45 @@ def build_tiles() -> list[dict]:
     ]
 
 
+# (chart id, heading, span). Spans per section sum to whole rows, so no card is
+# ever left alone beside dead space.
 SECTIONS = [
     ("overview", "Overview", "How much was sold, and how the basket changed.",
-     [("items-value", "Merchandise value by month"),
-      ("aov", "Average order value against average item price"),
-      ("payment-mix", "Payment mix by month")]),
+     [("items-value", "Merchandise value by month", "half"),
+      ("aov", "Average order value against average item price", "half"),
+      ("payment-mix", "Payment mix by month", "full")]),
     ("logistics", "Logistics", "Where and when deliveries missed the promised date.",
-     [("late-monthly", "Late rate by month"),
-      ("state-ci", "Late rate by destination state, with 95% intervals"),
-      ("state-trend", "Selected state over time"),
-      ("delay-distribution", "How early or late deliveries actually are"),
-      ("category-ci", "Late rate by category, with 95% intervals")]),
+     [("late-monthly", "Late rate by month", "full"),
+      ("state-ci", "Late rate by destination state, with 95% intervals", "full"),
+      ("state-trend", "Selected state over time", "half"),
+      ("delay-distribution", "How early or late deliveries actually are", "half"),
+      ("category-ci", "Late rate by category, with 95% intervals", "full")]),
     ("reviews", "Reviews", "How satisfaction relates to delivery timing.",
-     [("reviews-buckets", "Low scores by how late the order was"),
-      ("reviews-split", "Mean score, on time against late"),
-      ("review-coverage", "Review coverage by month")]),
-    ("customers", "Customers", "Repeat purchasing — an extension beyond the original four questions.",
-     [("cohort-retention", "90-day repeat rate by cohort"),
-      ("orders-per-customer", "Orders placed per person")]),
+     [("reviews-buckets", "Low scores by how late the order was", "full"),
+      ("reviews-split", "Mean score, on time against late", "half"),
+      ("review-coverage", "Review coverage by month", "half")]),
+    ("customers", "Customers",
+     "Repeat purchasing — an extension beyond the original four questions.",
+     [("cohort-retention", "90-day repeat rate by cohort", "full"),
+      ("orders-per-customer", "Orders placed per person", "half"),
+      ("value-concentration", "Where the orders and the value sit", "half")]),
 ]
 
-FULL_WIDTH = {"state-ci", "category-ci", "late-monthly", "cohort-retention"}
+# One height per span, so two charts side by side are always the same size and
+# a full-width chart is always the same taller size. state-ci sets its own.
+HEIGHTS = {"half": 330, "full": 390}
 
 
 def render_page(plotly_js: str) -> str:
     figs, tables, notes = build_figures()
+    for _, _, _, charts in SECTIONS:
+        for chart_id, _, span in charts:
+            layout = figs[chart_id]["layout"]
+            # Same height for every chart of a span, legend or not: adding room
+            # for a legend would push one card's plot below its neighbour's.
+            # The legend lives in the bottom margin instead.
+            if chart_id != "state-ci":
+                layout["height"] = HEIGHTS[span]
     tiles = build_tiles()
     states = sorted(load("state_priority.csv")["customer_state"].tolist())
     trend = load("late_rate_state_monthly.csv")
@@ -435,8 +469,8 @@ def render_page(plotly_js: str) -> str:
         f'<p class="tile-note">{t["note"]}</p></div>'
         for t in tiles)
 
-    def card(chart_id: str, heading: str) -> str:
-        wide = " wide" if chart_id in FULL_WIDTH else ""
+    def card(chart_id: str, heading: str, span: str) -> str:
+        wide = " wide" if span == "full" else ""
         return f"""
         <figure class="card{wide}" id="card-{chart_id}">
           <figcaption>
@@ -462,7 +496,7 @@ def render_page(plotly_js: str) -> str:
         sections_html += f"""
         <section class="panel" id="section-{key}" hidden>
           <p class="blurb">{blurb}</p>{filter_html}
-          <div class="grid">{"".join(card(cid, head) for cid, head in charts)}</div>
+          <div class="grid">{"".join(card(cid, head, span) for cid, head, span in charts)}</div>
         </section>"""
 
     payload = json.dumps({
@@ -522,14 +556,19 @@ header.top h1 {{ font-size: 25px; margin: 0 0 6px; letter-spacing: -0.01em; }}
 
 .tiles {{ display: grid; gap: 12px; margin: 26px 0 8px;
   grid-template-columns: repeat(auto-fit, minmax(186px, 1fr)); }}
+/* The label/value/unit block is a fixed height, so putting the note straight
+   after it lands every divider on the same line across the row. Pushing the
+   note to the bottom instead would align the tiles' feet and stagger the
+   dividers, which is the more visible of the two. */
 .tile {{ background: var(--surface); border: 1px solid var(--border);
-  border-radius: 10px; padding: 14px 15px 12px; position: relative; }}
+  border-radius: 10px; padding: 14px 15px 12px; }}
 .tile-label {{ font-size: 12.5px; color: var(--ink-2); }}
-.tile-value {{ font-size: 27px; font-weight: 600; letter-spacing: -0.02em; margin-top: 2px; }}
+.tile-value {{ font-size: 27px; font-weight: 600; letter-spacing: -0.02em;
+  margin-top: 2px; line-height: 1.15; }}
 .tile-unit {{ font-size: 12.5px; color: var(--muted); }}
 .tile-note {{
   font-size: 12.5px; color: var(--ink-2); line-height: 1.45;
-  margin: 9px 0 0; padding-top: 9px; border-top: 1px solid var(--border);
+  margin: 12px 0 0; padding-top: 10px; border-top: 1px solid var(--border);
 }}
 
 nav.tabs {{ display: flex; gap: 6px; flex-wrap: wrap; margin: 26px 0 18px;
@@ -542,6 +581,8 @@ nav.tabs {{ display: flex; gap: 6px; flex-wrap: wrap; margin: 26px 0 18px;
   font-weight: 600; }}
 
 .blurb {{ color: var(--ink-2); margin: 0 0 16px; max-width: 72ch; }}
+.panel {{ animation: fade 160ms ease-out; }}
+@keyframes fade {{ from {{ opacity: 0; }} to {{ opacity: 1; }} }}
 .filters {{ display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
   margin: 0 0 18px; padding: 11px 13px; background: var(--surface);
   border: 1px solid var(--border); border-radius: 10px; }}
@@ -551,18 +592,29 @@ nav.tabs {{ display: flex; gap: 6px; flex-wrap: wrap; margin: 26px 0 18px;
 .readout {{ font-size: 13px; color: var(--ink-2); }}
 .readout b {{ color: var(--ink); }}
 
-.grid {{ display: grid; gap: 14px; grid-template-columns: repeat(2, minmax(0, 1fr)); }}
-.card {{ background: var(--surface); border: 1px solid var(--border);
-  border-radius: 10px; padding: 15px 15px 8px; margin: 0; min-width: 0; }}
+.grid {{
+  display: grid; gap: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;          /* cards in a row share a height... */
+}}
+.card {{
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: 16px 16px 10px; margin: 0; min-width: 0;
+  display: flex; flex-direction: column;   /* ...and the plot sits at the bottom */
+}}
 .card.wide {{ grid-column: 1 / -1; }}
-figcaption {{ display: flex; align-items: baseline; gap: 12px; }}
-figcaption h3 {{ font-size: 15.5px; margin: 0; flex: 1; }}
+figcaption {{ display: flex; align-items: baseline; gap: 12px; min-height: 26px; }}
+figcaption h3 {{ font-size: 15.5px; margin: 0; flex: 1; line-height: 1.3; }}
 .toggle {{ background: none; border: 1px solid var(--border); border-radius: 7px;
-  color: var(--ink-2); font: inherit; font-size: 12px; padding: 3px 10px; cursor: pointer; }}
+  color: var(--ink-2); font: inherit; font-size: 12px; padding: 3px 10px;
+  cursor: pointer; flex: none; }}
 .toggle:hover {{ color: var(--ink); }}
 .toggle[aria-pressed="true"] {{ color: var(--ink); border-color: var(--accent); }}
-.note {{ font-size: 12.5px; color: var(--ink-2); margin: 7px 0 4px; line-height: 1.45; }}
-.plot {{ width: 100%; min-height: 380px; }}
+/* Notes run 2-4 lines. Reserving three keeps the plot baselines level across a
+   row without truncating the longer ones. */
+.note {{ font-size: 12.5px; color: var(--ink-2); margin: 8px 0 10px;
+  line-height: 1.45; min-height: 3em; }}
+.plot {{ width: 100%; margin-top: auto; }}
 .table-wrap {{ overflow-x: auto; max-height: 430px; overflow-y: auto; margin-bottom: 10px; }}
 table {{ border-collapse: collapse; font-size: 12.5px; width: 100%; }}
 th, td {{ text-align: right; padding: 5px 9px; border-bottom: 1px solid var(--border);
@@ -578,6 +630,9 @@ footer a {{ color: inherit; }}
 @media (max-width: 860px) {{
   .grid {{ grid-template-columns: 1fr; }}
   .card.wide {{ grid-column: auto; }}
+  .note {{ min-height: 0; }}
+  .tiles {{ grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }}
+  .shell {{ padding: 20px 14px 56px; }}
 }}
 </style>
 </head>
