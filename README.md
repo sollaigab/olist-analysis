@@ -1,11 +1,16 @@
 # Olist — Sales, Delivery Performance and Customer Satisfaction
 
+[![tests](https://github.com/leles/olist-analysis/actions/workflows/tests.yml/badge.svg)](https://github.com/leles/olist-analysis/actions/workflows/tests.yml)
+
 Reproducible analysis of the Olist Brazilian e-commerce dataset (~100k orders,
 2016–2018), covering item revenue over time, delivery delays by category and
 region, and the relationship between lateness and review scores.
 
 **Stack**: DuckDB + SQL · Python/pandas · pytest · Power BI (and a
 browser-viewable HTML/matplotlib alternative).
+
+127 tests. The 31 that need no licensed data run in CI on every push, building
+the full SQL model from a synthetic fixture.
 
 **[Read the findings →](reports/report.md)** · **[Interactive charts →](https://leles.github.io/olist-analysis/)**
 *(replace that link with your own Pages URL after enabling GitHub Pages on the `docs/` folder)*
@@ -39,7 +44,8 @@ data/          provenance and licence notes (raw data is NOT versioned)
 src/           ingest, build and export scripts
 sql/           00_staging -> 10_quality -> 20_intermediate -> 30_marts -> 40_kpi
 notebooks/     exploratory analysis
-tests/         grain, key-uniqueness and KPI reconciliation tests
+tests/         grain, KPI reconciliation, report figures, and a synthetic-data
+               pipeline suite that runs in CI without the licensed dataset
 dashboard/     exports/ (reconciled CSV aggregates), olist_charts.html, Power BI build spec
 docs/          GitHub Pages build of the interactive page (plotly from CDN, ~37 KB)
 reports/       data dictionary, quality report, figures, final report
@@ -101,11 +107,18 @@ These are the rules the whole project is held to:
   scores is reported as an association.
 - **A review of a multi-seller order is not attributed to one seller.**
 
-Three of these rules caught real errors during development, each recorded in the
+- **Rates carry confidence intervals.** 95% Wilson score, so a 21.5% rate on 396
+  orders is not read like a 4.5% rate on 40,399. Six of 27 states turn out not to
+  be distinguishable from the national rate at all.
+- **Cohorts are measured over a fixed window and censoring is flagged**, not
+  hidden by a trailing decline that is really an artefact of observation time.
+
+Four of these rules caught real errors during development, each recorded in the
 commit history rather than quietly fixed: a `review_id` primary key that was not
-unique, a benchmark hardcoded at one denominator and drawn against another, and a
+unique, a benchmark hardcoded at one denominator and drawn against another, a
 "within 1.3 points" claim about category spread that was false in the favourable
-direction.
+direction, and a dismissal of one category as small-sample noise that the
+confidence interval contradicted.
 
 ## AI usage
 
@@ -128,6 +141,22 @@ the download, and Power BI opened by hand against `dashboard/exports/`.
 
 This table lists what was actually used rather than what would sound good. A
 tool that was available but did not run is recorded as not used.
+
+## Continuous integration
+
+The dataset is licensed CC BY-NC-SA and cannot be committed, so CI cannot run the
+Olist-specific assertions — they skip by design when `data/olist.duckdb` is
+absent. What CI *does* run is the entire SQL pipeline against
+[`tests/synthetic.py`](tests/synthetic.py), a small fabricated fixture that
+deliberately reproduces every defect shape in the real source: a multi-seller
+order, a doubly-reviewed order, a `review_id` shared across orders, a split
+payment, a cancelled order with no items, a delivered order with no delivery
+date, and a zip prefix with a leading zero.
+
+That suite asserts grain, money conservation and the handling of each defect, so
+a regression in the pipeline fails the build even though the real data is
+nowhere near it. The workflow also fails if any dataset file is ever tracked in
+git.
 
 ## Licence
 

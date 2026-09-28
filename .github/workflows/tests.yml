@@ -1,0 +1,56 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  pipeline:
+    name: SQL pipeline on synthetic data
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: python -m pip install --quiet -r requirements-ci.txt
+
+      - name: Guard against committed data
+        # The dataset is CC BY-NC-SA and must never be redistributed here.
+        # A single stray CSV would breach that, so the build fails on one.
+        run: |
+          leaked=$(git ls-files | grep -E '^data/.*\.csv$|\.duckdb$|\.pbix$' || true)
+          if [ -n "$leaked" ]; then
+            echo "Licensed data or a local database is tracked in git:"
+            echo "$leaked"
+            exit 1
+          fi
+          echo "No dataset files tracked."
+
+      - name: Run the pipeline against synthetic data
+        # The licensed dataset cannot be committed, so the Olist-specific suites
+        # (test_grain, test_kpi, test_report_figures) skip here by design - the
+        # conftest fixture skips when data/olist.duckdb is absent. What DOES run
+        # is the whole SQL model, built from tests/synthetic.py through the
+        # shipped src/ingest.py and src/build.py, asserting grain, money
+        # conservation and the handling of every known defect shape.
+        run: python -m pytest tests/ -v --tb=short
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### What this run covered" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Ran: 24 SQL files built from a synthetic fixture, with grain," >> $GITHUB_STEP_SUMMARY
+          echo "conservation and defect-handling assertions." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Skipped by design: assertions about the real Olist figures." >> $GITHUB_STEP_SUMMARY
+          echo "They need the licensed dataset, which is not redistributed." >> $GITHUB_STEP_SUMMARY
+          echo "Run them locally after \`python src/ingest.py --download\`." >> $GITHUB_STEP_SUMMARY

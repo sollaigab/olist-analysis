@@ -8,6 +8,10 @@ generated_on,file,source,rows,columns,reconciled_on
 2026-09-28,reviews_by_punctuality.csv,mart.kpi_reviews_by_punctuality,2,9,n_orders
 2026-09-28,reviews_by_delay_bucket.csv,mart.kpi_reviews_by_delay_bucket,7,7,n_orders
 2026-09-28,review_coverage_monthly.csv,mart.kpi_review_coverage,20,5,n_reviewed
+2026-09-28,state_late_rate_ci.csv,mart.kpi_state_late_rate_ci,27,9,n_orders
+2026-09-28,category_late_rate_ci.csv,mart.kpi_category_late_rate_ci,52,9,n_orders
+2026-09-28,cohort_retention_90d.csv,mart.kpi_cohort_retention_90d,23,7,n_new_customers
+2026-09-28,customer_orders.csv,mart.kpi_customer_orders,9,8,n_customers
 2026-09-28,delay_distribution.csv,ad-hoc query in src/export_bi.py,81,2,row count
 2026-09-28,late_rate_monthly.csv,ad-hoc query in src/export_bi.py,20,7,row count
 2026-09-28,payment_mix_monthly.csv,ad-hoc query in src/export_bi.py,80,5,row count

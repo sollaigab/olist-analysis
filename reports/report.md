@@ -8,7 +8,7 @@ artefact of data coverage, not a business event.
 
 **Every figure below was produced by a query executed against the local DuckDB
 model.** The queries live in `sql/`, the aggregates in `dashboard/exports/`, and
-86 tests in `tests/` assert that totals are conserved to the cent across all five
+117 tests in `tests/` assert that totals are conserved to the cent across all five
 modelling layers — including `tests/test_report_figures.py`, which pins every
 headline number quoted below, so this document fails a test rather than drifting
 away from its data. Nothing here is transcribed from memory or from prior
@@ -36,6 +36,12 @@ is causal; or that a review of a multi-seller order belongs to one seller.
 5. Review scores track lateness **monotonically** — but roughly **two thirds of
    1–2 star reviews sit on orders that arrived on time**, so delivery speed is
    not the whole satisfaction story.
+6. Once sampling uncertainty is accounted for, **6 of 27 states cannot be
+   distinguished from the national rate at all**, and 39 of 52 categories cannot
+   either. Several headline gaps are too small to act on.
+7. **97.0% of customers placed exactly one order.** The 90-day repeat rate is
+   **2.03%**. This is an acquisition business, not a retention business, and that
+   reframes what any delivery improvement is worth.
 
 ---
 
@@ -137,6 +143,53 @@ Counting rule: an order is counted once per category it contains, so category
 order counts sum to more than the order total. This is correct for a
 multi-category basket and is stated rather than avoided by forcing a single
 category onto every order.
+
+### Which of these gaps are real?
+
+Showing group sizes is not the same as using them. AL's 21.46% rests on 396
+orders and SP's 4.50% on 40,399; printing both to two decimals implies a
+precision the smaller group does not have. Each rate below carries a **95% Wilson
+score interval** — chosen over the normal approximation because the normal
+interval misbehaves exactly here, at small n with proportions near zero, where it
+can even return a negative lower bound.
+
+![State late rate with confidence intervals](figures/08_state_late_rate_ci.png)
+
+| verdict against the national rate | states | orders |
+|---|---|---|
+| distinguishably worse | 15 | 28,771 |
+| not distinguishable | 6 | 3,167 |
+| distinguishably better | 6 | 64,265 |
+
+**RR is the clearest lesson.** Its 12.50% point estimate would place it seventh
+worst in the country — but on 40 orders the interval runs **5.46% to 26.11%**,
+20.7 points wide, straddling the national rate. Ranking it alongside RJ would be
+a mistake. RJ's own interval, on 12,310 orders, is 1.15 points wide.
+
+For categories the intervals change a conclusion of mine. An earlier draft
+dismissed `audio` as small-sample noise; the interval says otherwise —
+**11.85% [8.86, 15.68]**, which clears the national rate. It is a real
+difference. It is also 41 late orders in total, so it is real and negligible at
+the same time, which is precisely the distinction a point estimate cannot make.
+
+| verdict | categories | orders |
+|---|---|---|
+| distinguishably worse | 5 | 21,415 |
+| not distinguishable | 39 | 59,433 |
+| distinguishably better | 8 | 15,316 |
+
+The five distinguishably worse categories are `audio` (+5.06pp, n=346),
+`home_confort` (+2.65pp, n=392), `baby` (+1.28pp, n=2,800), `health_beauty`
+(+0.72pp, n=8,610) and `bed_bath_table` (+0.64pp, n=9,267). Note what happens at
+volume: the effects that survive are the ones too small to matter operationally,
+while `office_furniture`, which has the largest gap of any category above 1,000
+orders (+1.30pp), is **not** distinguishable. Statistically detectable and
+operationally meaningful are different properties, and this dataset separates
+them cleanly.
+
+The intervals cover sampling variability only. They say nothing about whether
+this anonymised sample represents the marketplace, or whether 2018 resembles
+today.
 
 ### By destination state — not flat
 
@@ -258,6 +311,44 @@ Item value associated with late orders: **985,618.47 BRL, 7.48% of item value in
 the window.** That is the value of orders that happened to be late, not revenue
 lost — no cancellation-after-delay or refund data exists to support a loss claim.
 
+## Beyond the brief — repeat purchasing
+
+The four questions above concern orders. This section concerns *people*, and it
+is the reason `customer_unique_id` exists in the data model: there are 99,441
+`customer_id` values but only 96,096 people behind them, so counting the wrong
+one inflates the customer base by the repeat rate.
+
+![Cohort retention](figures/09_cohort_retention.png)
+
+| orders per customer | customers | share of customers | share of orders | share of item value |
+|---|---|---|---|---|
+| 1 | 92,102 | **96.96%** | 93.78% | 94.44% |
+| 2 | 2,652 | 2.79% | 5.40% | 4.82% |
+| 3 | 188 | 0.20% | 0.57% | 0.50% |
+| 4+ | 48 | 0.05% | 0.25% | 0.24% |
+
+**97.0% of customers placed exactly one order.** Pooled across cohorts that have
+lived a full 90 days, **2.03%** of new customers ordered again within 90 days
+(1,560 of 76,845). The highest complete cohort reaches 3.19%; the lowest 1.03%.
+
+**Right censoring is handled explicitly.** The last purchase in the dataset is
+2018-09-03, so a customer who first bought in August 2018 had days to return
+while one from January 2017 had eighteen months. Comparing them directly would
+manufacture a decline that is purely an artefact of observation time. Every
+cohort here is measured over the same fixed 90-day window, and the three cohorts
+that have not lived through one are drawn dashed and flagged `is_complete =
+false` rather than quietly shown or quietly dropped. Their apparent 1.01%, 1.08%
+and 0.48% are censoring, not collapse.
+
+**Why this reframes everything above.** At a 2% repeat rate, the marketplace runs
+on acquisition, not retention. That cuts both ways for the delivery
+recommendations: a customer who was going to buy once cannot be retained harder
+by a faster delivery, so the case for fixing logistics rests on reputation,
+review scores and marketplace standing rather than on a repeat-purchase model
+this data does not support. It also means **no lifetime-value calculation is
+available here** — with 97% single-purchase customers and a 20-month window,
+there is no observed lifetime to value.
+
 ---
 
 ## Recommendations
@@ -329,6 +420,16 @@ per-parcel data exists. **Do not attribute these reviews to individual sellers**
 **Analytical**
 - Every relationship reported is an **association**. No causal identification is
   attempted and none is available.
+- Confidence intervals cover **sampling variability only**. They do not describe
+  whether the anonymised sample represents the marketplace, and they are computed
+  per group without correcting for the fact that 27 states and 52 categories are
+  compared at once — a handful of "distinguishable" verdicts at the margin would
+  be expected by chance alone. The verdicts are a filter against over-reading
+  small groups, not a formal multiple-comparison procedure.
+- Retention is measured on a **fixed 90-day window** per cohort. A different
+  window would give a different rate; a 90-day figure is not a churn rate, and
+  no lifetime value can be derived from 20 months of a 97%-single-purchase
+  population.
 - Delay is measured at **date granularity**; sub-day precision is not meaningful
   against a midnight estimate.
 - Multiple reviews per order are collapsed to the **most recent** (547 orders,

@@ -299,6 +299,93 @@ def fig_late_rate_monthly() -> None:
     save(fig, "07_late_rate_monthly.png")
 
 
+def fig_state_late_rate_ci() -> None:
+    """Forest plot. The interval is the point of the chart, not decoration."""
+    df = load("state_late_rate_ci.csv").sort_values("late_rate_pct")
+    national = df["national_rate_pct"].iloc[0]
+    fig, ax = plt.subplots(figsize=(8.6, 8.6))
+    y = range(len(df))
+    colors = [CRITICAL if v == "worse than national"
+              else SERIES_1 if v == "better than national"
+              else MUTED
+              for v in df["verdict"]]
+    for i, (_, row) in enumerate(df.iterrows()):
+        ax.plot([row["ci_lower_pct"], row["ci_upper_pct"]], [i, i],
+                color=colors[i], linewidth=2.2, solid_capstyle="round", zorder=2)
+    ax.scatter(df["late_rate_pct"], y, color=colors, s=34, zorder=3,
+               edgecolor=SURFACE, linewidth=1.2)
+    ax.axvline(national, color=INK_SECONDARY, linestyle=":", linewidth=1.4, zorder=1)
+    ax.text(national + 0.4, len(df) - 0.5, f"national {national:.2f}%",
+            color=INK_SECONDARY, fontsize=9)
+    ax.set_yticks(list(y))
+    ax.set_yticklabels([f"{s}  n={int(n):,}" for s, n in
+                        zip(df["customer_state"], df["n_orders"])], fontsize=8.6)
+    ax.set_xlabel("Late rate with 95% Wilson interval")
+    ax.xaxis.set_major_formatter(lambda v, _: f"{v:.0f}%")
+    ax.set_xlim(0, df["ci_upper_pct"].max() * 1.12)
+    ax.grid(axis="x", alpha=0.9)
+    ax.grid(axis="y", visible=False)
+    n_worse = int((df["verdict"] == "worse than national").sum())
+    n_same = int((df["verdict"] == "not distinguishable").sum())
+    finish(ax, "Six states cannot be told apart from the national rate",
+           f"{n_worse} states are distinguishably worse, {n_same} are not distinguishable "
+           "at all · grey = interval crosses the national rate",
+           "Source: mart.kpi_state_late_rate_ci. Wilson score interval, 95%. The interval "
+           "covers sampling variability only; it says nothing about whether the sample "
+           "represents the marketplace or whether 2018 resembles today.")
+    ax.grid(axis="y", visible=False)
+    save(fig, "08_state_late_rate_ci.png")
+
+
+def fig_cohort_retention() -> None:
+    df = load("cohort_retention_90d.csv")
+    df["cohort_month"] = pd.to_datetime(df["cohort_month"])
+    # Tiny early cohorts (2 and 1 customers) carry intervals 60+ points wide and
+    # would dominate the y-axis without saying anything.
+    df = df[df["n_new_customers"] >= 100].reset_index(drop=True)
+    complete = df[df["is_complete"]]
+    censored = df[~df["is_complete"]]
+    pooled = 100.0 * complete["n_repeated_within_90d"].sum() / complete["n_new_customers"].sum()
+
+    fig, ax = plt.subplots(figsize=(9.4, 4.8))
+    ax.fill_between(complete["cohort_month"], complete["ci_lower_pct"],
+                    complete["ci_upper_pct"], color=SERIES_1, alpha=0.16, linewidth=0)
+    ax.plot(complete["cohort_month"], complete["repeat_rate_90d_pct"],
+            color=SERIES_1, linewidth=2, marker="o", markersize=4,
+            markerfacecolor=SURFACE, markeredgewidth=1.4, markeredgecolor=SERIES_1)
+    ax.plot(censored["cohort_month"], censored["repeat_rate_90d_pct"],
+            color=MUTED, linewidth=2, linestyle="--", marker="o", markersize=4,
+            markerfacecolor=SURFACE, markeredgewidth=1.4, markeredgecolor=MUTED)
+    ax.axhline(pooled, color=CRITICAL, linestyle=":", linewidth=1.4)
+    ax.set_ylabel("Share ordering again within 90 days")
+    ax.yaxis.set_major_formatter(lambda v, _: f"{v:.0f}%")
+    top = max(4.0, df["ci_upper_pct"].max() * 1.1)
+    ax.set_ylim(0, top)
+
+    # The series never rises above ~3.2% after the first few months, so the
+    # upper-right of the plot is genuinely empty. Both labels go there with
+    # leader lines rather than sitting on top of the data.
+    ax.annotate(f"dotted line: {pooled:.2f}% pooled\nacross complete cohorts",
+                (complete["cohort_month"].iloc[-3], pooled),
+                xytext=(complete["cohort_month"].iloc[-1], top * 0.90),
+                textcoords="data", ha="right", color=CRITICAL, fontsize=8.8,
+                arrowprops=dict(arrowstyle="-", color=CRITICAL, linewidth=0.8, alpha=0.6))
+    if len(censored):
+        ax.annotate("censored: fewer than\n90 days of observation",
+                    (censored["cohort_month"].iloc[0],
+                     censored["repeat_rate_90d_pct"].iloc[0]),
+                    xytext=(censored["cohort_month"].iloc[-1], top * 0.62),
+                    textcoords="data", ha="right", color=MUTED, fontsize=8.8,
+                    arrowprops=dict(arrowstyle="-", color=AXIS, linewidth=0.8))
+    finish(ax, "Almost nobody comes back",
+           "97.0% of customers placed exactly one order · shaded band is the 95% "
+           "Wilson interval · dashed cohorts have not lived a full 90 days",
+           "Source: mart.kpi_cohort_retention_90d. Cohorts under 100 customers omitted. "
+           "Counted per customer_unique_id, the person - customer_id would count the same "
+           "person twice. Dataset ends 2018-09-03, which is what censors the last cohorts.")
+    save(fig, "09_cohort_retention.png")
+
+
 FIGURES = [
     fig_sales_monthly,
     fig_aov_monthly,
@@ -307,6 +394,8 @@ FIGURES = [
     fig_reviews_by_delay,
     fig_category_priority,
     fig_late_rate_monthly,
+    fig_state_late_rate_ci,
+    fig_cohort_retention,
 ]
 
 

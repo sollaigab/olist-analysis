@@ -1,0 +1,10 @@
+# Minimal set for continuous integration.
+#
+# CI runs tests/test_pipeline_invariants.py, which builds the full SQL model
+# from the synthetic fixture in tests/synthetic.py. It needs no plotting, no
+# notebook and no Kaggle client, so those are left out and the job stays fast.
+# Versions mirror requirements.txt exactly.
+duckdb==1.1.3
+pandas==2.3.3
+pyarrow==17.0.0
+pytest==9.1.1

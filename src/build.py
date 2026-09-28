@@ -28,11 +28,19 @@ def sql_files(prefixes: list[str] | None = None) -> list[Path]:
     return [f for d in dirs for f in sorted(d.glob("*.sql"))]
 
 
-def main(prefixes: list[str] | None = None) -> None:
-    if not DB_PATH.exists():
-        raise SystemExit(f"{DB_PATH} not found. Run src/ingest.py first.")
+def main(prefixes: list[str] | None = None, db_path: Path | None = None,
+         quiet: bool = False) -> None:
+    """Run the SQL layers against `db_path` (default: the project database).
 
-    con = duckdb.connect(str(DB_PATH))
+    `db_path` exists so the CI suite can run the identical SQL against a small
+    synthetic fixture. Nothing in the pipeline is special-cased for tests; the
+    tests simply point it somewhere else.
+    """
+    db_path = db_path or DB_PATH
+    if not db_path.exists():
+        raise SystemExit(f"{db_path} not found. Run src/ingest.py first.")
+
+    con = duckdb.connect(str(db_path))
     for schema in SCHEMAS:
         con.execute(f"CREATE SCHEMA IF NOT EXISTS {schema}")
 
@@ -44,17 +52,20 @@ def main(prefixes: list[str] | None = None) -> None:
     for path in files:
         if path.parent.name != current_dir:
             current_dir = path.parent.name
-            print(f"\n[{current_dir}]")
+            if not quiet:
+                print(f"\n[{current_dir}]")
         started = time.perf_counter()
         try:
             con.execute(path.read_text(encoding="utf-8"))
         except Exception as exc:
             con.close()
             raise SystemExit(f"  FAILED {path.name}\n{exc}") from exc
-        print(f"  ok  {path.name:<34} {time.perf_counter() - started:6.2f}s")
+        if not quiet:
+            print(f"  ok  {path.name:<34} {time.perf_counter() - started:6.2f}s")
 
     con.close()
-    print(f"\nBuild complete: {len(files)} file(s).")
+    if not quiet:
+        print(f"\nBuild complete: {len(files)} file(s).")
 
 
 if __name__ == "__main__":

@@ -262,3 +262,129 @@ def test_item_value_in_late_orders(con):
     ).fetchone()
     assert Decimal(str(row[0])) == Decimal("985618.47")
     assert float(row[1]) == 7.48
+
+
+# ---------------------------------------------------------------------------
+# Uncertainty (M6)
+# ---------------------------------------------------------------------------
+
+def test_state_verdicts_against_the_national_rate(con):
+    rows = dict(
+        con.execute(
+            "SELECT verdict, count(*) FROM mart.kpi_state_late_rate_ci GROUP BY 1"
+        ).fetchall()
+    )
+    assert rows["worse than national"] == 15
+    assert rows["not distinguishable"] == 6
+    assert rows["better than national"] == 6
+
+
+def test_rr_is_the_cautionary_case(con):
+    """Seventh-worst point estimate, interval 20 points wide, 40 orders."""
+    row = con.execute(
+        "SELECT n_orders, late_rate_pct, ci_lower_pct, ci_upper_pct, ci_width_pp, verdict "
+        "FROM mart.kpi_state_late_rate_ci WHERE customer_state = 'RR'"
+    ).fetchone()
+    assert row[0] == 40
+    assert float(row[1]) == 12.50
+    assert float(row[2]) == 5.46
+    assert float(row[3]) == 26.11
+    assert float(row[4]) == 20.65
+    assert row[5] == "not distinguishable"
+
+
+def test_rj_interval_is_narrow_because_the_group_is_large(con):
+    row = con.execute(
+        "SELECT n_orders, ci_width_pp, verdict FROM mart.kpi_state_late_rate_ci "
+        "WHERE customer_state = 'RJ'"
+    ).fetchone()
+    assert row[0] == 12_310
+    assert float(row[1]) == 1.15
+    assert row[2] == "worse than national"
+
+
+def test_audio_is_a_real_difference_after_all(con):
+    """An earlier draft dismissed this as small-sample noise. The interval disagrees."""
+    row = con.execute(
+        "SELECT n_orders, n_late_orders, late_rate_pct, ci_lower_pct, ci_upper_pct, verdict "
+        "FROM mart.kpi_category_late_rate_ci WHERE category = 'audio'"
+    ).fetchone()
+    assert (row[0], row[1]) == (346, 41)
+    assert float(row[2]) == 11.85
+    assert float(row[3]) == 8.86
+    assert float(row[4]) == 15.68
+    assert row[5] == "worse than national"
+
+
+def test_largest_category_gap_at_volume_is_not_distinguishable(con):
+    """office_furniture has the biggest gap above 1,000 orders and still fails."""
+    row = con.execute(
+        "SELECT c.rate_gap_pp, ci.verdict "
+        "FROM mart.kpi_category_priority c "
+        "JOIN mart.kpi_category_late_rate_ci ci USING (category) "
+        "WHERE c.category = 'office_furniture'"
+    ).fetchone()
+    assert float(row[0]) == 1.30
+    assert row[1] == "not distinguishable"
+
+
+def test_category_verdict_counts(con):
+    rows = dict(
+        con.execute(
+            "SELECT verdict, count(*) FROM mart.kpi_category_late_rate_ci GROUP BY 1"
+        ).fetchall()
+    )
+    assert rows["worse than national"] == 5
+    assert rows["not distinguishable"] == 39
+    assert rows["better than national"] == 8
+
+
+# ---------------------------------------------------------------------------
+# Retention (M6)
+# ---------------------------------------------------------------------------
+
+def test_almost_every_customer_buys_once(con):
+    row = con.execute(
+        "SELECT n_customers, pct_of_customers, pct_of_orders, pct_of_items_value "
+        "FROM mart.kpi_customer_orders WHERE orders_per_customer = 1"
+    ).fetchone()
+    assert row[0] == 92_102
+    assert float(row[1]) == 96.960
+    assert float(row[2]) == 93.78
+    assert float(row[3]) == 94.44
+
+
+def test_pooled_90_day_repeat_rate(con):
+    row = con.execute(
+        "SELECT sum(n_new_customers), sum(n_repeated_within_90d) "
+        "FROM mart.kpi_cohort_retention_90d WHERE is_complete"
+    ).fetchone()
+    assert row[0] == 76_845
+    assert row[1] == 1_560
+    assert round(100.0 * row[1] / row[0], 2) == 2.03
+
+
+def test_censored_cohorts_are_flagged_not_dropped(con):
+    censored = con.execute(
+        "SELECT cohort_month, repeat_rate_90d_pct FROM mart.kpi_cohort_retention_90d "
+        "WHERE NOT is_complete ORDER BY cohort_month"
+    ).fetchall()
+    months = [str(row[0]) for row in censored]
+    assert months == ["2018-06-01", "2018-07-01", "2018-08-01"], (
+        "the censored set changed; the dataset ends 2018-09-03 and the 90-day "
+        "window is what determines this boundary"
+    )
+    # Their rates look like collapse and are not: this is the artefact the
+    # is_complete flag exists to prevent anyone quoting.
+    assert all(float(row[1]) < 2.03 for row in censored)
+
+
+def test_customer_unique_id_is_what_retention_counts(con):
+    """Using customer_id would inflate the customer base by the repeat rate."""
+    people = con.execute(
+        "SELECT sum(n_customers) FROM mart.kpi_customer_orders"
+    ).fetchone()[0]
+    order_level_ids = con.execute(
+        "SELECT count(DISTINCT customer_id) FROM mart.fct_orders WHERE is_sale_eligible"
+    ).fetchone()[0]
+    assert people < order_level_ids

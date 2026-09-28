@@ -36,6 +36,10 @@ EXPORTS: list[tuple[str, str, str | None]] = [
     ("reviews_by_punctuality.csv", "mart.kpi_reviews_by_punctuality", "n_orders"),
     ("reviews_by_delay_bucket.csv", "mart.kpi_reviews_by_delay_bucket", "n_orders"),
     ("review_coverage_monthly.csv", "mart.kpi_review_coverage", "n_reviewed"),
+    ("state_late_rate_ci.csv", "mart.kpi_state_late_rate_ci", "n_orders"),
+    ("category_late_rate_ci.csv", "mart.kpi_category_late_rate_ci", "n_orders"),
+    ("cohort_retention_90d.csv", "mart.kpi_cohort_retention_90d", "n_new_customers"),
+    ("customer_orders.csv", "mart.kpi_customer_orders", "n_customers"),
 ]
 
 # Extra aggregates that are shaped for charts rather than for reading.

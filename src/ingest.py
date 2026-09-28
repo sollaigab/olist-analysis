@@ -73,25 +73,34 @@ def check_files() -> list[str]:
     return [name for name in SOURCE_FILES if not (RAW_DIR / name).exists()]
 
 
-def ingest() -> None:
-    missing = check_files()
+def ingest(db_path: Path | None = None, raw_dir: Path | None = None,
+           quiet: bool = False) -> None:
+    """Load the CSVs in `raw_dir` into `db_path`.
+
+    Both are parameters so the CI suite can load a synthetic fixture through
+    exactly this code path rather than a test-only imitation of it.
+    """
+    db_path = db_path or DB_PATH
+    raw_dir = raw_dir or RAW_DIR
+    missing = [name for name in SOURCE_FILES if not (raw_dir / name).exists()]
     if missing:
         raise SystemExit(
-            f"Missing {len(missing)} expected file(s) in {RAW_DIR}:\n  "
+            f"Missing {len(missing)} expected file(s) in {raw_dir}:\n  "
             + "\n  ".join(missing)
             + "\n\nRun with --download, or place the files manually."
         )
 
-    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    con = duckdb.connect(str(DB_PATH))
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+    con = duckdb.connect(str(db_path))
 
     for schema in SCHEMAS:
         con.execute(f"CREATE SCHEMA IF NOT EXISTS {schema}")
 
-    print(f"\n{'table':<22} {'rows':>10} {'cols':>6}")
-    print("-" * 40)
+    if not quiet:
+        print(f"\n{'table':<22} {'rows':>10} {'cols':>6}")
+        print("-" * 40)
     for filename, table in SOURCE_FILES.items():
-        path = (RAW_DIR / filename).as_posix()
+        path = (raw_dir / filename).as_posix()
         con.execute(f"DROP TABLE IF EXISTS raw.{table}")
         con.execute(
             f"""
@@ -106,10 +115,12 @@ def ingest() -> None:
         )
         rows = con.execute(f"SELECT count(*) FROM raw.{table}").fetchone()[0]
         cols = len(con.execute(f"DESCRIBE raw.{table}").fetchall())
-        print(f"{table:<22} {rows:>10,} {cols:>6}")
+        if not quiet:
+            print(f"{table:<22} {rows:>10,} {cols:>6}")
 
     con.close()
-    print(f"\nDatabase written to {DB_PATH}")
+    if not quiet:
+        print(f"\nDatabase written to {db_path}")
 
 
 if __name__ == "__main__":
