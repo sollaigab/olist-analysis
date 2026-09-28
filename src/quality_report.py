@@ -21,17 +21,17 @@ from config import DB_PATH, PROJECT_ROOT  # noqa: E402
 OUT_PATH = PROJECT_ROOT / "reports" / "quality_report.md"
 
 SECTIONS = [
-    ("Cast audit", "qa.cast_audit",
+    ("Cast audit", "qa.cast_audit ORDER BY column_checked",
      "A non-zero `failed_casts` means an explicit cast turned a real value into "
      "NULL. `blank_source` counts values that were already absent in the CSV."),
-    ("Declared keys and cardinality", "qa.key_checks",
+    ("Declared keys and cardinality", "qa.key_checks ORDER BY declared_key",
      "`duplicate_rows` is expected to be 0 where the expectation says *unique*, "
      "and greater than 0 where it says *NOT unique* — a one-to-many relationship "
      "that turned out to be one-to-one would be just as much of a surprise."),
-    ("Referential integrity", "qa.referential_checks",
+    ("Referential integrity", "qa.referential_checks ORDER BY n_orphans DESC, relationship",
      "Orphans are counted, not assumed away. Rows noted *must be 0* are hard "
      "failures; the rest are documented characteristics of the dataset."),
-    ("Business rules", "qa.business_checks",
+    ("Business rules", "qa.business_checks ORDER BY status, n_rows DESC, rule",
      "`FAIL` contradicts the model and is excluded or flagged downstream. "
      "`INFO` is a genuine property of the data that shapes how KPIs are built."),
 ]

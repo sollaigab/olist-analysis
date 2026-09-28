@@ -41,7 +41,7 @@ MAX_SAMPLE_CHARS = 26
 def sample_values(con, table: str, column: str, n: int = 3) -> str:
     rows = con.execute(
         f'SELECT DISTINCT "{column}" FROM stg.{table} '
-        f'WHERE "{column}" IS NOT NULL LIMIT {n}'
+        f'WHERE "{column}" IS NOT NULL ORDER BY 1 LIMIT {n}'
     ).fetchall()
     out = []
     for (value,) in rows:

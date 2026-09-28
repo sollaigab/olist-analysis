@@ -50,4 +50,5 @@ SELECT 'customer zip prefixes absent from geolocation', count(DISTINCT c.custome
        'limits map coverage, not order counts'
 FROM stg.customers c
 LEFT JOIN stg.geolocation g ON g.zip_prefix = c.customer_zip_prefix
-WHERE g.zip_prefix IS NULL;
+WHERE g.zip_prefix IS NULL
+ORDER BY n_orphans DESC, relationship;

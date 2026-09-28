@@ -63,4 +63,5 @@ SELECT * FROM (VALUES
   'has_review AND in_analysis_window',
   'orders carrying a review',
   'The operationally actionable tail; a mean of 4.1 hides it.')
-) AS t(kpi, definition, formula, filter_applied, denominator, caveat);
+) AS t(kpi, definition, formula, filter_applied, denominator, caveat)
+ORDER BY kpi;

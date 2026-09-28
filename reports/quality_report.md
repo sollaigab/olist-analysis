@@ -27,18 +27,18 @@ A non-zero `failed_casts` means an explicit cast turned a real value into NULL. 
 
 | declared_key | rows | distinct_keys | duplicate_rows | expectation |
 |---|---|---|---|---|
-| stg.orders / order_id | 99,441 | 99,441 | 0 | unique |
 | stg.customers / customer_id | 99,441 | 99,441 | 0 | unique |
 | stg.customers / customer_unique_id | 99,441 | 96,096 | 3,345 | NOT unique (repeat buyers) |
+| stg.geolocation / zip_prefix | 19,015 | 19,015 | 0 | unique |
 | stg.order_items / (order_id, order_item_id) | 112,650 | 112,650 | 0 | unique |
 | stg.order_items / order_id | 112,650 | 98,666 | 13,984 | NOT unique (fan-out) |
 | stg.order_payments / (order_id, payment_sequential) | 103,886 | 103,886 | 0 | unique |
 | stg.order_payments / order_id | 103,886 | 99,440 | 4,446 | NOT unique (split payments) |
-| stg.order_reviews / review_id | 99,224 | 98,410 | 814 | unique |
 | stg.order_reviews / order_id | 99,224 | 98,673 | 551 | NOT unique (multiple reviews) |
+| stg.order_reviews / review_id | 99,224 | 98,410 | 814 | unique |
+| stg.orders / order_id | 99,441 | 99,441 | 0 | unique |
 | stg.products / product_id | 32,951 | 32,951 | 0 | unique |
 | stg.sellers / seller_id | 3,095 | 3,095 | 0 | unique |
-| stg.geolocation / zip_prefix | 19,015 | 19,015 | 0 | unique |
 
 ## Referential integrity
 
@@ -47,16 +47,16 @@ Orphans are counted, not assumed away. Rows noted *must be 0* are hard failures;
 | relationship | n_orphans | note |
 |---|---|---|
 | orders without any item | 775 | expected for unavailable/canceled orders |
-| orders without any payment | 1 | investigate individually if small |
 | orders without any review | 768 | drives the review-coverage denominator |
+| products with no category at all | 610 | bucketed as unknown downstream |
+| customer zip prefixes absent from geolocation | 157 | limits map coverage, not order counts |
+| products with an untranslatable category | 2 | category stays in Portuguese for these |
+| orders without any payment | 1 | investigate individually if small |
 | items pointing at a missing order | 0 | must be 0 |
 | items pointing at a missing product | 0 | must be 0 |
 | items pointing at a missing seller | 0 | must be 0 |
 | orders pointing at a missing customer | 0 | must be 0 |
 | reviews pointing at a missing order | 0 | must be 0 |
-| products with an untranslatable category | 2 | category stays in Portuguese for these |
-| products with no category at all | 610 | bucketed as unknown downstream |
-| customer zip prefixes absent from geolocation | 157 | limits map coverage, not order counts |
 
 ## Business rules
 
@@ -66,10 +66,10 @@ Orphans are counted, not assumed away. Rows noted *must be 0* are hard failures;
 |---|---|---|---|
 | delivery to customer earlier than handover to carrier | 23 | FAIL | physically impossible ordering; flagged, excluded from lead-time medians |
 | delivered orders missing a delivery date | 8 | FAIL | status says delivered but the timestamp is absent; excluded from all delay KPIs |
-| delivery earlier than purchase | 0 | FAIL | must be 0 |
 | approval earlier than purchase | 0 | FAIL | must be 0 |
-| item price <= 0 | 0 | FAIL | must be 0 for a marketplace sale |
+| delivery earlier than purchase | 0 | FAIL | must be 0 |
 | freight value < 0 | 0 | FAIL | must be 0 |
+| item price <= 0 | 0 | FAIL | must be 0 for a marketplace sale |
 | repeat customers (customer_unique_id with >1 order) | 2,997 | INFO | why customer counts must use customer_unique_id, not customer_id |
 | orders fulfilled by more than one seller | 1,278 | INFO | excluded from any seller-level review attribution |
 | review_id reused across different orders | 789 | INFO | review_id is NOT a primary key; the grain is (review_id, order_id) |

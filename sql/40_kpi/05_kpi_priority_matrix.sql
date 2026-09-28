@@ -30,7 +30,7 @@ SELECT
     c.interstate_pct
 FROM mart.kpi_delay_by_category c
 CROSS JOIN overall o
-ORDER BY excess_late_orders DESC;
+ORDER BY excess_late_orders DESC, c.category;
 
 -- Same idea at state level.
 CREATE OR REPLACE VIEW mart.kpi_state_priority AS
@@ -54,4 +54,4 @@ SELECT
     s.items_value
 FROM mart.kpi_delay_by_state s
 CROSS JOIN overall o
-ORDER BY excess_late_orders DESC;
+ORDER BY excess_late_orders DESC, s.customer_state;

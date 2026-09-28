@@ -56,4 +56,4 @@ SELECT * FROM (
            'partial months at both ends; time series is trimmed to 2017-01..2018-08'
     FROM stg.orders
     WHERE purchased_at < TIMESTAMP '2017-01-01' OR purchased_at >= TIMESTAMP '2018-09-01'
-) ORDER BY status, n_rows DESC;
+) ORDER BY status, n_rows DESC, rule;

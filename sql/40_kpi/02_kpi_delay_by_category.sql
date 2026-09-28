@@ -13,7 +13,7 @@ SELECT
     round(100.0 * count(DISTINCT order_id) FILTER (WHERE is_late)
                 / nullif(count(DISTINCT order_id), 0), 2) AS late_rate_pct,
     median(delay_days)                              AS median_delay_days,
-    quantile_cont(delay_days, 0.9)                  AS p90_delay_days,
+    round(quantile_cont(delay_days, 0.9), 1)        AS p90_delay_days,
     median(delivery_days)                           AS median_delivery_days,
     sum(item_price)                                 AS items_value,
     sum(item_price) FILTER (WHERE is_late)          AS items_value_late_orders,
@@ -23,4 +23,4 @@ FROM mart.fct_order_items
 WHERE has_delivery_measurement AND in_analysis_window
 GROUP BY category
 HAVING count(DISTINCT order_id) >= 100
-ORDER BY n_late_orders DESC;
+ORDER BY n_late_orders DESC, category;

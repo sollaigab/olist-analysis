@@ -8,7 +8,7 @@ SELECT
     count(*) FILTER (WHERE is_late)                 AS n_late_orders,
     round(100.0 * count(*) FILTER (WHERE is_late) / count(*), 2) AS late_rate_pct,
     median(delay_days)                              AS median_delay_days,
-    quantile_cont(delay_days, 0.9)                  AS p90_delay_days,
+    round(quantile_cont(delay_days, 0.9), 1)        AS p90_delay_days,
     median(delivery_days)                           AS median_delivery_days,
     median(promised_days)                           AS median_promised_days,
     median(handover_days)                           AS median_handover_days,
@@ -18,4 +18,4 @@ SELECT
 FROM mart.fct_orders
 WHERE has_delivery_measurement AND in_analysis_window
 GROUP BY customer_state
-ORDER BY n_late_orders DESC;
+ORDER BY n_late_orders DESC, customer_state;

@@ -327,7 +327,7 @@ def build_html() -> None:
     blocks: list[str] = []
     first = True
 
-    def add(fig: go.Figure, heading: str, note: str) -> None:
+    def add(fig: go.Figure, heading: str, note: str, div_id: str) -> None:
         nonlocal first
         fig.update_layout(
             template="plotly_white", font=dict(family="system-ui, sans-serif", size=13, color=INK),
@@ -336,8 +336,10 @@ def build_html() -> None:
         )
         fig.update_xaxes(gridcolor=GRID, linecolor=AXIS, zeroline=False)
         fig.update_yaxes(gridcolor=GRID, linecolor=AXIS, zeroline=False)
+        # div_id pinned: plotly defaults to a random UUID, which makes the
+        # output file differ on every run even when the data is identical.
         html = pio.to_html(fig, full_html=False, include_plotlyjs="inline" if first else False,
-                           config={"displayModeBar": False})
+                           div_id=div_id, config={"displayModeBar": False})
         first = False
         blocks.append(f"<section><h2>{heading}</h2><p class='note'>{note}</p>{html}</section>")
 
@@ -349,7 +351,7 @@ def build_html() -> None:
     fig.update_yaxes(title="Item value, BRL", rangemode="tozero")
     add(fig, "Merchandise value over time",
         "Item value only, shipping excluded. Cancelled and unavailable orders removed. "
-        "Not revenue and not profit.")
+        "Not revenue and not profit.", "chart-sales-monthly")
 
     states = load("state_priority.csv").sort_values("late_rate_pct")
     fig = go.Figure(go.Bar(
@@ -363,7 +365,7 @@ def build_html() -> None:
     fig.update_xaxes(title="Late rate")
     add(fig, "Late rate by destination state",
         "Denominator: delivered orders holding both a delivery date and an estimate. "
-        "Hover for the group size behind each rate.")
+        "Hover for the group size behind each rate.", "chart-late-by-state")
 
     buckets = load("reviews_by_delay_bucket.csv")
     fig = go.Figure(go.Bar(
@@ -376,7 +378,7 @@ def build_html() -> None:
     fig.update_yaxes(title="Share rated 1 or 2 stars")
     add(fig, "Review scores against delivery punctuality",
         "Association, not causation. The same underlying problem can produce both the delay "
-        "and the low score.")
+        "and the low score.", "chart-reviews-by-delay")
 
     dist = load("delay_distribution.csv")
     fig = go.Figure(go.Bar(
@@ -386,7 +388,7 @@ def build_html() -> None:
     fig.update_xaxes(title="Days from promised date (negative = early)")
     fig.update_yaxes(title="Orders")
     add(fig, "Distribution of delivery timing",
-        "Trimmed to plus or minus 40 days. The median order arrives 12 days early.")
+        "Trimmed to plus or minus 40 days. The median order arrives 12 days early.", "chart-delay-distribution")
 
     page = f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8">

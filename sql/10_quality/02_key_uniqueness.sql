@@ -56,4 +56,5 @@ FROM stg.sellers
 UNION ALL
 SELECT 'stg.geolocation / zip_prefix',
        count(*), count(DISTINCT zip_prefix), count(*) - count(DISTINCT zip_prefix), 'unique'
-FROM stg.geolocation;
+FROM stg.geolocation
+ORDER BY declared_key;
