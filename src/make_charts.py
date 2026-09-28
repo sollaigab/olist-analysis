@@ -318,12 +318,25 @@ def build_png() -> None:
 
 # --- Interactive HTML ----------------------------------------------------
 
-def build_html() -> None:
-    """Self-contained page with hover, for viewers without Power BI."""
+def build_html(for_pages: bool = False) -> None:
+    """Interactive page with hover, for viewers without Power BI.
+
+    Two builds of the same page, because the two destinations want opposite
+    things:
+
+    * local (`dashboard/olist_charts.html`) inlines the whole plotly bundle, so
+      the file opens from disk with no network at all - 4.2 MB.
+    * GitHub Pages (`docs/index.html`) loads plotly from a CDN instead, which
+      takes the page to roughly 50 KB. GitHub does not render HTML from the
+      repository file view, so Pages is the only way a reviewer actually sees
+      this page rather than its source.
+    """
     import plotly.graph_objects as go
     import plotly.io as pio
 
-    out = PROJECT_ROOT / "dashboard" / "olist_charts.html"
+    out = (PROJECT_ROOT / "docs" / "index.html") if for_pages         else (PROJECT_ROOT / "dashboard" / "olist_charts.html")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    plotly_js = "cdn" if for_pages else "inline"
     blocks: list[str] = []
     first = True
 
@@ -338,7 +351,8 @@ def build_html() -> None:
         fig.update_yaxes(gridcolor=GRID, linecolor=AXIS, zeroline=False)
         # div_id pinned: plotly defaults to a random UUID, which makes the
         # output file differ on every run even when the data is identical.
-        html = pio.to_html(fig, full_html=False, include_plotlyjs="inline" if first else False,
+        html = pio.to_html(fig, full_html=False,
+                           include_plotlyjs=plotly_js if first else False,
                            div_id=div_id, config={"displayModeBar": False})
         first = False
         blocks.append(f"<section><h2>{heading}</h2><p class='note'>{note}</p>{html}</section>")
@@ -418,17 +432,21 @@ Data: Olist Brazilian E-Commerce, CC BY-NC-SA 4.0. Only aggregates are published
 </main></body></html>"""
 
     out.write_text(page, encoding="utf-8")
-    size_mb = out.stat().st_size / 1_048_576
-    print(f"  wrote {out.relative_to(PROJECT_ROOT)} ({size_mb:.1f} MB, self-contained)")
+    size_kb = out.stat().st_size / 1024
+    flavour = "plotly from CDN" if for_pages else "self-contained"
+    print(f"  wrote {out.relative_to(PROJECT_ROOT)} ({size_kb:,.0f} KB, {flavour})")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--png", action="store_true")
-    parser.add_argument("--html", action="store_true")
+    parser.add_argument("--png", action="store_true", help="figures only")
+    parser.add_argument("--html", action="store_true", help="local interactive page only")
+    parser.add_argument("--pages", action="store_true", help="docs/index.html for GitHub Pages only")
     args = parser.parse_args()
-    do_all = not (args.png or args.html)
+    do_all = not (args.png or args.html or args.pages)
     if args.png or do_all:
         build_png()
     if args.html or do_all:
-        build_html()
+        build_html(for_pages=False)
+    if args.pages or do_all:
+        build_html(for_pages=True)

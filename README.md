@@ -7,8 +7,16 @@ region, and the relationship between lateness and review scores.
 **Stack**: DuckDB + SQL · Python/pandas · pytest · Power BI (and a
 browser-viewable HTML/matplotlib alternative).
 
-**Read the findings**: [`reports/report.md`](reports/report.md).
-**See the charts without installing anything**: open `dashboard/olist_charts.html`.
+**[Read the findings →](reports/report.md)** · **[Interactive charts →](https://leles.github.io/olist-analysis/)**
+*(replace that link with your own Pages URL after enabling GitHub Pages on the `docs/` folder)*
+
+![Monthly late rate](reports/figures/07_late_rate_monthly.png)
+
+Three months out of twenty carry **48.4% of every late delivery**. The orders
+customers rated *worst*, meanwhile, were **six times less likely to be late** than
+the average order — so delivery speed explains only part of dissatisfaction.
+
+![Late rate by destination state](reports/figures/03_late_rate_by_state.png)
 
 > Status: all five milestones complete. The Power BI `.pbix` is the one deliverable
 > not in the repository — Power BI Desktop was not installed on the development
@@ -32,7 +40,8 @@ src/           ingest, build and export scripts
 sql/           00_staging -> 10_quality -> 20_intermediate -> 30_marts -> 40_kpi
 notebooks/     exploratory analysis
 tests/         grain, key-uniqueness and KPI reconciliation tests
-dashboard/     exports/ (CSV aggregates), olist_charts.html, Power BI file, screenshots
+dashboard/     exports/ (reconciled CSV aggregates), olist_charts.html, Power BI build spec
+docs/          GitHub Pages build of the interactive page (plotly from CDN, ~37 KB)
 reports/       data dictionary, quality report, figures, final report
 ```
 
@@ -58,9 +67,13 @@ python src/quality_report.py    # reports/quality_report.md
 # 6. Dashboard-ready aggregates, each reconciled against its source view
 python src/export_bi.py
 
-# 7. Figures and the standalone interactive page
+# 7. Figures, the standalone page, and the GitHub Pages build
 python src/make_charts.py
 ```
+
+A from-scratch rebuild is **byte-reproducible**: delete `data/olist.duckdb`, run
+the steps above, and every generated file — CSVs, figures, HTML, data dictionary,
+quality report — comes back identical. Verified, not assumed.
 
 `tests/test_report_figures.py` pins every headline number quoted in
 `reports/report.md`, so the report cannot silently drift away from the data: if
@@ -118,4 +131,8 @@ tool that was available but did not run is recorded as not used.
 
 ## Licence
 
-Code: MIT. Data: CC BY-NC-SA 4.0 — see `data/README.md`.
+Code: MIT, see [`LICENSE`](LICENSE). The dataset is published by Olist under
+CC BY-NC-SA 4.0 and is **not redistributed here** — no raw records are versioned.
+The aggregates under `dashboard/exports/` are derived group-level summaries and
+remain subject to the dataset's own terms, including its non-commercial
+restriction. See [`data/README.md`](data/README.md).

@@ -1,0 +1,16 @@
+# Normalise line endings so a clone on another OS does not show the whole
+# repository as modified.
+* text=auto eol=lf
+
+# Binary: never touched by line-ending conversion.
+*.png  binary
+*.pbix binary
+*.duckdb binary
+
+# Notebooks: keep diffs readable and let GitHub classify them correctly.
+*.ipynb text eol=lf linguist-documentation=false
+
+# The generated interactive page is output, not source; keep it out of the
+# language statistics so the repo reads as SQL and Python.
+dashboard/olist_charts.html linguist-generated=true
+docs/index.html             linguist-generated=true
