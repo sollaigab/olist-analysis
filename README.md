@@ -7,7 +7,13 @@ region, and the relationship between lateness and review scores.
 **Stack**: DuckDB + SQL · Python/pandas · pytest · Power BI (and a
 browser-viewable HTML/matplotlib alternative).
 
-> Status: work in progress. Milestones 1-4 of 5 complete (scaffold, model, KPIs, exploration and charts). Remaining: dashboard and report.
+**Read the findings**: [`reports/report.md`](reports/report.md).
+**See the charts without installing anything**: open `dashboard/olist_charts.html`.
+
+> Status: all five milestones complete. The Power BI `.pbix` is the one deliverable
+> not in the repository — Power BI Desktop was not installed on the development
+> machine, so `dashboard/POWERBI_BUILD.md` is a build sheet rather than a record of
+> something already built.
 
 ---
 
@@ -56,6 +62,10 @@ python src/export_bi.py
 python src/make_charts.py
 ```
 
+`tests/test_report_figures.py` pins every headline number quoted in
+`reports/report.md`, so the report cannot silently drift away from the data: if
+one changes without the other, the suite fails.
+
 The DuckDB database lands at `data/olist.duckdb` and is rebuilt from scratch by
 step 2; nothing downstream depends on manual state.
 
@@ -77,6 +87,12 @@ These are the rules the whole project is held to:
 - **Associations are not causes.** Late deliveries correlating with low review
   scores is reported as an association.
 - **A review of a multi-seller order is not attributed to one seller.**
+
+Three of these rules caught real errors during development, each recorded in the
+commit history rather than quietly fixed: a `review_id` primary key that was not
+unique, a benchmark hardcoded at one denominator and drawn against another, and a
+"within 1.3 points" claim about category spread that was false in the favourable
+direction.
 
 ## AI usage
 

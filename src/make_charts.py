@@ -260,11 +260,43 @@ def fig_category_priority() -> None:
     ax.set_ylabel("Late rate")
     ax.yaxis.set_major_formatter(lambda v, _: f"{v:.0f}%")
     finish(ax, "No category stands out once volume is taken into account",
-           "Every high-volume category sits within 1.3 points of the national rate · "
+           "Categories with 1,000+ orders span 4.32% to 8.09% late · "
            "bubble area is item value · categories under 100 orders excluded",
            "Source: mart.kpi_category_priority. An order is counted once per category it "
            "contains, so category order counts sum to more than the order total.")
     save(fig, "06_category_priority.png")
+
+
+def fig_late_rate_monthly() -> None:
+    df = load("late_rate_monthly.csv")
+    df["purchase_month"] = pd.to_datetime(df["purchase_month"])
+    spikes = {"2017-11", "2018-02", "2018-03"}
+    fig, ax = plt.subplots(figsize=(9.4, 4.8))
+    colors = [CRITICAL if m.strftime("%Y-%m") in spikes else SERIES_1
+              for m in df["purchase_month"]]
+    bars = ax.bar(df["purchase_month"], df["late_rate_pct"], color=colors, width=22)
+    baseline = 100.0 * df.loc[~df["purchase_month"].dt.strftime("%Y-%m").isin(spikes),
+                              "n_late_orders"].sum() / \
+               df.loc[~df["purchase_month"].dt.strftime("%Y-%m").isin(spikes), "n_orders"].sum()
+    ax.axhline(baseline, color=MUTED, linestyle=":", linewidth=1.4)
+    # Anchored over the low-bar stretch so the label never crosses a bar top.
+    ax.text(df["purchase_month"].iloc[4], baseline + 0.6,
+            f"rate in the other 17 months: {baseline:.2f}%", color=MUTED, fontsize=9)
+    for bar, (_, row) in zip(bars, df.iterrows()):
+        if row["purchase_month"].strftime("%Y-%m") in spikes:
+            ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.5,
+                    f"{row['late_rate_pct']:.1f}%\nn={int(row['n_late_orders']):,}",
+                    ha="center", fontsize=8.6, color=CRITICAL, fontweight="semibold")
+    ax.set_ylabel("Late rate")
+    ax.yaxis.set_major_formatter(lambda v, _: f"{v:.0f}%")
+    ax.set_ylim(0, df["late_rate_pct"].max() * 1.35)
+    finish(ax, "Lateness is episodic, not a constant background rate",
+           "Three months out of twenty carry 48.4% of every late order · "
+           "n = 96,203 measurable delivered orders",
+           "Source: mart.fct_orders. Order volume correlates with the monthly late rate at "
+           "r = 0.51, so volume is associated with the spikes but does not account for them: "
+           "2018-01 carried comparable volume at a 5.70% rate.")
+    save(fig, "07_late_rate_monthly.png")
 
 
 FIGURES = [
@@ -274,6 +306,7 @@ FIGURES = [
     fig_delay_distribution,
     fig_reviews_by_delay,
     fig_category_priority,
+    fig_late_rate_monthly,
 ]
 
 
