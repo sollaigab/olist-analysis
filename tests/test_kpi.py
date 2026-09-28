@@ -1,11 +1,11 @@
 """Reconciliation tests for the mart and KPI layers.
 
-The question each test answers is the one a stakeholder asks first:
-does this number still add up to the source?
+These answer the first question anyone asks: does this number still add up to
+the source?
 
-A join that multiplies amounts is the most common way an e-commerce analysis
-goes wrong, and it is silent: the chart still renders, the trend still looks
-plausible, the total is simply too big. These tests make it loud.
+A join that multiplies amounts is the usual way an e-commerce analysis goes
+wrong, and it's silent - the chart renders, the trend looks fine, the total is
+just too big.
 """
 
 from __future__ import annotations

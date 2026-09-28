@@ -1,10 +1,8 @@
 -- Uncertainty on every rate.
 --
--- The project has shown group sizes from the start, but showing n is not the
--- same as using it. AL's 21.46% rests on 396 orders and SP's 4.50% on 40,399;
--- printing both to two decimals implies a precision the smaller group does not
--- have. These views attach an interval to each rate so the comparison is
--- honest.
+-- Showing n isn't the same as using it. AL's 21.46% rests on 396 orders, SP's
+-- 4.50% on 40,399, and printing both to two decimals implies a precision the
+-- small group doesn't have.
 --
 -- WILSON SCORE INTERVAL, not the normal approximation.
 -- The textbook p +/- z*sqrt(p(1-p)/n) misbehaves exactly where this data lives:

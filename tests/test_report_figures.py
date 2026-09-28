@@ -1,11 +1,9 @@
 """Assert the headline figures quoted in reports/report.md.
 
-A written report drifts away from its data the moment either one is edited
-without the other. These tests pin every number the report states in prose or in
-a summary table, so the drift becomes a failing test instead of a wrong slide.
+Edit the report or the data without the other and they drift apart. These pin
+the numbers the report states, so drift shows up as a failing test.
 
-If one of these fails, exactly one of two things is true: the data changed, or
-the report is now wrong. Both are worth stopping for.
+If one fails, either the data changed or the report is wrong.
 """
 
 from __future__ import annotations

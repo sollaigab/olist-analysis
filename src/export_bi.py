@@ -4,10 +4,10 @@ Only aggregates leave the database. The raw dataset is licensed CC BY-NC-SA and
 is not redistributed; these files contain group-level counts and sums, which is
 also all a dashboard needs.
 
-Every export is reconciled against the database immediately after it is written:
-the CSV is read back and its totals compared to the source view. An export that
-does not reconcile aborts the run rather than quietly shipping a wrong file to
-Power BI, which is exactly the failure that makes a dashboard untrustworthy.
+Each export is checked right after it's written: the CSV gets read back off disk
+and its totals compared against the source view. A mismatch aborts the run. The
+read-back matters - checking the in-memory DataFrame would pass even if the write
+mangled something.
 
 Usage:
     python src/export_bi.py

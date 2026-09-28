@@ -3,10 +3,9 @@
 -- Every contributing table was already collapsed to order grain in
 -- 20_intermediate, so these joins cannot multiply a single amount.
 --
--- The mart carries flags, not filters. Nothing is thrown away here; the KPI
--- layer decides what to exclude and says so out loud. That way a stakeholder
--- asking "does this include cancellations?" gets an answer from one visible
--- WHERE clause instead of from archaeology.
+-- Flags here, filters in the KPI layer. Nothing is dropped at this level, so
+-- "does this include cancellations?" is answered by one visible WHERE clause
+-- further downstream instead of by digging through the model.
 --
 -- Delay is measured at DATE granularity, not timestamp granularity.
 -- order_estimated_delivery_date carries no time component (it is always

@@ -1,14 +1,12 @@
 -- Collapse multiple reviews to one row per order.
 --
--- RULE (stated because any choice here changes the numbers):
---   Keep the MOST RECENT review per order, by review_created_at, breaking ties
---   on review_answered_at and finally on review_id so the result is stable.
---   Rationale: the latest review is the customer's settled opinion after any
---   resolution attempt, which is the opinion an operational fix should move.
+-- Rule: keep the most recent review per order (review_created_at, then
+-- review_answered_at, then review_id for a stable result). The later review is
+-- the customer's settled view after any support contact, which is the one an
+-- operational fix would have to move.
 --
--- 547 orders carry more than one review; n_reviews records how many rows were
--- collapsed, and score_spread records whether the collapsed reviews disagreed,
--- so the choice of rule can be audited rather than trusted.
+-- 547 orders have more than one. n_reviews and score_spread are kept so anyone
+-- can check how much this rule actually changed.
 CREATE OR REPLACE TABLE int.reviews_by_order AS
 WITH ranked AS (
     SELECT

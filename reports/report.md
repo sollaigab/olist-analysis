@@ -6,17 +6,15 @@ Boundary months are excluded: 2016-09 holds 4 orders and 2016-12 holds exactly 1
 so including them would put a cliff at each end of every time series that is an
 artefact of data coverage, not a business event.
 
-**Every figure below was produced by a query executed against the local DuckDB
-model.** The queries live in `sql/`, the aggregates in `dashboard/exports/`, and
-117 tests in `tests/` assert that totals are conserved to the cent across all five
-modelling layers — including `tests/test_report_figures.py`, which pins every
-headline number quoted below, so this document fails a test rather than drifting
-away from its data. Nothing here is transcribed from memory or from prior
-knowledge of this dataset.
+Every figure below came from a query run against the local DuckDB model. The
+queries are in `sql/`, the aggregates in `dashboard/exports/`, and the test suite
+checks that totals reconcile across all five modelling layers.
+`tests/test_report_figures.py` pins the numbers quoted here, so if the data and
+the document ever disagree, a test fails.
 
-**Three things this report never claims**: that item value is revenue or profit
-(there is no cost, tax, refund or commission data); that any relationship shown
-is causal; or that a review of a multi-seller order belongs to one seller.
+Three things I'm not claiming: that item value is revenue or profit (there's no
+cost, tax, refund or commission data), that any relationship shown is causal, or
+that a multi-seller order's review belongs to one seller.
 
 ---
 
@@ -70,10 +68,10 @@ interchangeable.)*
 
 ![Average order value](figures/02_aov_monthly.png)
 
-Order value fell faster than item price, which means baskets got smaller as well
-as cheaper. The dataset contains no pricing, promotion, or catalogue-mix data, so
-**why** this happened is not answerable here — it is a question for the
-commercial team, flagged rather than guessed at.
+Order value fell faster than item price, so baskets got smaller as well as
+cheaper. There's no pricing, promotion or catalogue-mix data here, so why it
+happened isn't answerable from this dataset. It's a question for whoever owns
+merchandising.
 
 ## Q2 — Which categories and areas concentrate delays?
 
@@ -108,10 +106,10 @@ calendar day is on time.
 | Nov 2017, Feb 2018, Mar 2018 | 20,846 | 3,158 | **15.15%** | **48.4%** |
 | the other 17 months | 75,357 | 3,373 | 4.48% | 51.6% |
 
-Three months out of twenty carry nearly half of all late orders. In those months
-median delivery time stretched from 10 to 13 days and carrier handover from 2 to
-3 days, while **the promised lead time did not move** (23 days vs 24). The
-network absorbed more load without the promise adjusting to match.
+Three months out of twenty carry nearly half the late orders. In those months
+median delivery stretched from 10 to 13 days and carrier handover from 2 to 3,
+but the promised lead time didn't move (23 days against 24). The network took on
+more load and the promise stayed where it was.
 
 Order volume correlates with the monthly late rate at **r = 0.51** — a moderate
 association that does *not* account for the spikes. January 2018 carried 7,069
@@ -161,16 +159,15 @@ can even return a negative lower bound.
 | not distinguishable | 6 | 3,167 |
 | distinguishably better | 6 | 64,265 |
 
-**RR is the clearest lesson.** Its 12.50% point estimate would place it seventh
-worst in the country — but on 40 orders the interval runs **5.46% to 26.11%**,
-20.7 points wide, straddling the national rate. Ranking it alongside RJ would be
-a mistake. RJ's own interval, on 12,310 orders, is 1.15 points wide.
+RR makes the point best. Its 12.50% would put it seventh worst in the country,
+but on 40 orders the interval runs 5.46% to 26.11% — 20.7 points wide, straddling
+the national rate. Ranking it next to RJ would be wrong. RJ's interval, on 12,310
+orders, is 1.15 points wide.
 
-For categories the intervals change a conclusion of mine. An earlier draft
-dismissed `audio` as small-sample noise; the interval says otherwise —
-**11.85% [8.86, 15.68]**, which clears the national rate. It is a real
-difference. It is also 41 late orders in total, so it is real and negligible at
-the same time, which is precisely the distinction a point estimate cannot make.
+The category intervals changed one of my conclusions. I'd written off `audio` as
+small-sample noise; it isn't — 11.85% [8.86, 15.68] clears the national rate. But
+it's also 41 late orders in total, so it's real and negligible at once. That's
+the distinction a point estimate can't make.
 
 | verdict | categories | orders |
 |---|---|---|
@@ -178,14 +175,13 @@ the same time, which is precisely the distinction a point estimate cannot make.
 | not distinguishable | 39 | 59,433 |
 | distinguishably better | 8 | 15,316 |
 
-The five distinguishably worse categories are `audio` (+5.06pp, n=346),
-`home_confort` (+2.65pp, n=392), `baby` (+1.28pp, n=2,800), `health_beauty`
-(+0.72pp, n=8,610) and `bed_bath_table` (+0.64pp, n=9,267). Note what happens at
-volume: the effects that survive are the ones too small to matter operationally,
-while `office_furniture`, which has the largest gap of any category above 1,000
-orders (+1.30pp), is **not** distinguishable. Statistically detectable and
-operationally meaningful are different properties, and this dataset separates
-them cleanly.
+The five that clear the bar are `audio` (+5.06pp, n=346), `home_confort`
+(+2.65pp, n=392), `baby` (+1.28pp, n=2,800), `health_beauty` (+0.72pp, n=8,610)
+and `bed_bath_table` (+0.64pp, n=9,267). Look at what survives at volume: the
+effects big enough to detect are the ones too small to act on, while
+`office_furniture` — the largest gap of any category above 1,000 orders, at
++1.30pp — doesn't clear it. Detectable and worth acting on are different
+questions.
 
 The intervals cover sampling variability only. They say nothing about whether
 this anonymised sample represents the marketplace, or whether 2018 resembles
@@ -207,10 +203,10 @@ today.
 *`excess late orders` = late orders minus what the group would have at the
 national rate. It is an arithmetic gap, not a forecast of what a fix would save.*
 
-**RJ against MG is the cleanest comparison in the dataset**: similar volume
-(12,310 vs 11,319), identical carrier handover (2 days), near-identical promised
-lead time (25 vs 24 days) — and 12.14% late against 4.59%. Same promise, same
-dispatch speed, very different outcome.
+RJ against MG is the cleanest comparison available: similar volume (12,310 vs
+11,319), the same 2-day carrier handover, near-identical promised lead time
+(25 vs 24 days) — and 12.14% late against 4.59%. Same promise, same dispatch
+speed, very different result.
 
 ### The variance is downstream of handover
 
@@ -223,8 +219,8 @@ dispatch speed, very different outcome.
 | Median promised lead time | 31.88 d | 31.32 d |
 
 Sellers dispatch at the same speed everywhere and promises are the same length
-everywhere. The entire difference appears **after** the parcel leaves the seller.
-That points at carrier network and final delivery, and away from seller dispatch
+everywhere. The difference shows up after the parcel leaves the seller, which
+points at the carrier network and the final leg rather than at seller
 performance.
 
 ## Q3 — How do reviews differ between on-time and late orders?
@@ -252,25 +248,25 @@ numbers and `score_spread` is retained in the model so the choice can be audited
 | late 8–15 days | 1,601 | 1.674 | 80.01% |
 | late 16+ days | 1,178 | 1.727 | 78.27% |
 
-Three observations, in decreasing order of confidence:
+Three things stand out, in roughly descending order of how much weight I'd put
+on them:
 
-1. **The relationship is monotone across seven buckets.** A confounder would have
-   to track lateness *by degree* to reproduce that, which makes the association
-   considerably stronger than a two-group split would.
-2. **The break is at the promise, not at an absolute speed.** Low scores go from
-   12.42% on the promised day to 32.14% at one to three days late. What appears
-   to matter is the promise being broken, not the number of days in transit.
-3. **The curve plateaus past eight days** near 80%. Beyond a point, more lateness
-   cannot lower a score that is already at the floor.
+1. It's monotone across all seven buckets. A confounder would have to track
+   lateness by degree to reproduce that, which makes this a good deal more
+   convincing than the simple late/on-time split.
+2. The break is at the promise, not at some absolute speed. Low scores go from
+   12.42% on the promised day to 32.14% at one to three days late. What seems to
+   matter is the promise being broken, not the days in transit.
+3. It plateaus past eight days, near 80%. Past a point you can't push a score
+   that's already at the floor any lower.
 
-**This is an association, not a causal effect.** A difficult route, a slow
-seller, or a stock problem can produce both the delay and the low score. Nothing
-in this dataset isolates one from the other.
+This is an association. A hard route, a slow seller or a stock problem could
+produce both the delay and the low score, and nothing here separates them.
 
-**And lateness is not the main source of dissatisfaction.** Of 12,228 orders
-rated 1–2 stars in the window, **3,980 (32.5%) were late**. The other 8,248
-arrived on time and were rated badly anyway. Even perfectly punctual orders carry
-a 9.25% low-score rate — a floor that no logistics improvement can touch.
+Lateness also isn't the main source of dissatisfaction. Of 12,228 orders rated
+1–2 stars in the window, 3,980 (32.5%) were late. The other 8,248 arrived on time
+and got a bad review anyway. Even punctual orders sit at a 9.25% low-score rate,
+which is a floor no logistics work will move.
 
 ### An open question the data cannot settle
 
@@ -279,19 +275,19 @@ a 9.25% low-score rate — a floor that no logistics improvement can touch.
 | single-seller | 94,931 | 94,302 | 4.173 | 6.87% |
 | multi-seller | 1,272 | 1,258 | **2.862** | **1.02%** |
 
-Multi-seller orders are **six times less likely to be late** and score **1.3
-stars worse**. Lateness cannot explain this. A plausible mechanism is split
-shipments arriving at different times, so the customer experiences an incomplete
-order even though the final parcel beat the promise — but `delivered_customer_at`
-is a single order-level timestamp with no per-parcel dates, so **this cannot be
-tested with the data available**. It is recorded as a question, not a finding.
+Multi-seller orders are six times less likely to be late and score 1.3 stars
+worse. Lateness doesn't explain that. My guess is split shipments arriving at
+different times, so the customer sees an incomplete order even though the last
+parcel beat the promise — but `delivered_customer_at` is one order-level
+timestamp with no per-parcel dates, so I can't test it. Recording it as a
+question rather than a finding.
 
 ## Q4 — What deserves attention, weighing rate against volume?
 
-Ranking by rate alone promotes groups of a few hundred orders. Ranking by volume
-alone promotes whatever is biggest. The table below carries both plus the
-absolute count of late orders, which is the quantity an operations team actually
-has to work through.
+Rank by rate and you promote groups of a few hundred orders. Rank by volume and
+you promote whatever is biggest. The table carries both, plus the absolute count
+of late orders — which is what an operations team actually has to work
+through.
 
 | rank by excess | state | orders | late rate | excess late orders |
 |---|---|---|---|---|
@@ -340,20 +336,20 @@ that have not lived through one are drawn dashed and flagged `is_complete =
 false` rather than quietly shown or quietly dropped. Their apparent 1.01%, 1.08%
 and 0.48% are censoring, not collapse.
 
-**Why this reframes everything above.** At a 2% repeat rate, the marketplace runs
-on acquisition, not retention. That cuts both ways for the delivery
-recommendations: a customer who was going to buy once cannot be retained harder
-by a faster delivery, so the case for fixing logistics rests on reputation,
-review scores and marketplace standing rather than on a repeat-purchase model
-this data does not support. It also means **no lifetime-value calculation is
-available here** — with 97% single-purchase customers and a 20-month window,
-there is no observed lifetime to value.
+This changes how to read the rest. At a 2% repeat rate the marketplace runs on
+acquisition, not retention, which cuts both ways for the delivery
+recommendations. You can't retain a one-time buyer harder by delivering faster,
+so the case for fixing logistics rests on reputation and review standing rather
+than on repeat purchasing — and this data doesn't support the repeat-purchase
+version of that argument. It also means there's no lifetime value to calculate:
+97% single-purchase customers over 20 months gives you no observed lifetime.
 
 ---
 
 ## Recommendations
 
-Each names the evidence, what it would change, and how to tell whether it worked.
+Each one names the evidence, what it would change, and how you'd know if it
+worked.
 
 ### 1. Make the delivery promise state-aware rather than uniform
 
@@ -380,21 +376,21 @@ median delivery stretched 10 → 13 days and handover 2 → 3 days while the pro
 stayed flat. Volume correlates at r = 0.51 — associated, but not sufficient:
 Jan 2018 had comparable volume at a 5.70% rate.
 
-**Action.** Two parts, and the second matters more. First, flex the promise
-during known demand peaks instead of holding it fixed. Second, **capture the data
-that would explain the spikes** — carrier assignment, dispatch capacity, per-parcel
-tracking events. The current dataset can show *that* the spikes happened; it
-cannot show why, and no amount of reanalysis will change that.
+**Action.** Two parts, and the second matters more. Flex the promise during known
+demand peaks instead of holding it fixed. Then capture the data that would
+actually explain the spikes — carrier assignment, dispatch capacity, per-parcel
+tracking. This dataset shows that they happened; it can't show why, and no
+further analysis of it will.
 
 **Measure.** Late rate in peak months against the non-peak baseline of 4.48%.
 
 ### 3. Investigate multi-seller orders as a satisfaction problem in their own right
 
 **Evidence.** 1,272 multi-seller orders: 1.02% late, mean score 2.862, against
-6.87% late and 4.173 for single-seller orders. Better delivery performance,
-substantially worse scores. This is the clearest signal in the data that
-satisfaction is not reducible to punctuality — reinforced by the fact that 67.5%
-of all 1–2 star reviews sit on orders that arrived on time.
+6.87% late and 4.173 for single-seller orders. Better delivery, much worse
+scores. It's the clearest sign in the data that satisfaction isn't just
+punctuality, and it lines up with the 67.5% of 1–2 star reviews that sit on
+on-time orders.
 
 **Action.** Record per-parcel delivery events so a split shipment can be
 distinguished from a single one. Until then, this is an open question.
@@ -451,8 +447,9 @@ per-parcel data exists. **Do not attribute these reviews to individual sellers**
 | Payment lines ≤ 0 | 9 | kept, never counted as revenue |
 | Products with no category | 610 | bucketed as `unknown` |
 
-These counts are frozen as baselines in `tests/test_grain.py`, so the suite fails
-if the source data changes rather than staying permanently red.
+These counts are frozen as baselines in `tests/test_grain.py`. The suite fails if
+the source data changes, rather than sitting permanently red because the data has
+known defects.
 
 ---
 

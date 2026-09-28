@@ -1,7 +1,7 @@
 -- Grain: 1 row = 1 order. Key: order_id.
--- Casts are explicit and TRY_CAST-based: a malformed timestamp becomes NULL
--- rather than aborting the build, and sql/10_quality/ counts how many did so,
--- so the failure is measured instead of hidden.
+-- TRY_CAST so a malformed timestamp becomes NULL instead of killing the build.
+-- sql/10_quality/01_cast_audit.sql counts how many did, so nothing goes missing
+-- quietly.
 CREATE OR REPLACE TABLE stg.orders AS
 SELECT
     order_id,

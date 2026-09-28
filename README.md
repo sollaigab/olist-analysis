@@ -1,167 +1,149 @@
-# Olist — Sales, Delivery Performance and Customer Satisfaction
+# Olist — sales, delivery performance and customer satisfaction
 
 [![tests](https://github.com/leles/olist-analysis/actions/workflows/tests.yml/badge.svg)](https://github.com/leles/olist-analysis/actions/workflows/tests.yml)
 
-Reproducible analysis of the Olist Brazilian e-commerce dataset (~100k orders,
-2016–2018), covering item revenue over time, delivery delays by category and
-region, and the relationship between lateness and review scores.
+Analysis of ~100k orders from the Olist Brazilian marketplace (2016–2018): how
+item value moved over time, where delivery delays concentrate, and how review
+scores relate to late deliveries.
 
-**Stack**: DuckDB + SQL · Python/pandas · pytest · Power BI (and a
-browser-viewable HTML/matplotlib alternative).
+Built with DuckDB and SQL, Python/pandas for exploration, pytest for checks, and
+Power BI plus a browser-viewable HTML page for the visuals.
 
-127 tests. The 31 that need no licensed data run in CI on every push, building
-the full SQL model from a synthetic fixture.
-
-**[Read the findings →](reports/report.md)** · **[Interactive charts →](https://leles.github.io/olist-analysis/)**
-*(replace that link with your own Pages URL after enabling GitHub Pages on the `docs/` folder)*
+**[Findings →](reports/report.md)** · **[Interactive charts →](https://leles.github.io/olist-analysis/)**
 
 ![Monthly late rate](reports/figures/07_late_rate_monthly.png)
 
-Three months out of twenty carry **48.4% of every late delivery**. The orders
-customers rated *worst*, meanwhile, were **six times less likely to be late** than
-the average order — so delivery speed explains only part of dissatisfaction.
+Three months out of twenty account for 48.4% of every late delivery. And the
+orders customers rated worst were six times *less* likely to be late than
+average — so delivery speed only explains part of the dissatisfaction.
 
 ![Late rate by destination state](reports/figures/03_late_rate_by_state.png)
 
-> Status: all five milestones complete. The Power BI `.pbix` is the one deliverable
-> not in the repository — Power BI Desktop was not installed on the development
-> machine, so `dashboard/POWERBI_BUILD.md` is a build sheet rather than a record of
-> something already built.
-
 ---
 
-## Business questions
+## Questions
 
-1. How does the value of sold items evolve over time?
-2. Which product categories and geographic areas concentrate delivery delays?
+1. How does the value of sold items change over time?
+2. Which categories and regions concentrate delivery delays?
 3. How do review scores differ between on-time and late orders?
-4. Which issues deserve attention once both rate **and** volume are considered?
+4. What deserves attention once you weigh rate against volume?
 
-## Repository layout
+Plus one I added later: how much repeat purchasing is there? (Short answer: very
+little — 97% of customers ordered once.)
+
+## Layout
 
 ```
-data/          provenance and licence notes (raw data is NOT versioned)
-src/           ingest, build and export scripts
+data/          provenance and licence notes (raw data is not versioned)
+src/           ingest, build, export and chart scripts
 sql/           00_staging -> 10_quality -> 20_intermediate -> 30_marts -> 40_kpi
 notebooks/     exploratory analysis
 tests/         grain, KPI reconciliation, report figures, and a synthetic-data
-               pipeline suite that runs in CI without the licensed dataset
-dashboard/     exports/ (reconciled CSV aggregates), olist_charts.html, Power BI build spec
-docs/          GitHub Pages build of the interactive page (plotly from CDN, ~37 KB)
+               suite that runs in CI without the licensed dataset
+dashboard/     exports/ (CSV aggregates), olist_charts.html, Power BI build spec
+docs/          GitHub Pages build of the interactive page
 reports/       data dictionary, quality report, figures, final report
 ```
 
-## Reproduction
+## Running it
 
 ```bash
-# 1. Dependencies
 python -m pip install -r requirements.txt
 
-# 2. Data (see data/README.md for the manual alternative)
-python src/ingest.py --download
-
-# 3. Build the modelled layers (staging -> quality -> intermediate -> marts -> KPI)
-python src/build.py
-
-# 4. Tests
+python src/ingest.py --download   # or place the CSVs yourself, see data/README.md
+python src/build.py               # runs the SQL layers in order
 python -m pytest -q
 
-# 5. Regenerate the generated documents
-python src/profile_columns.py   # reports/data_dictionary.md
-python src/quality_report.py    # reports/quality_report.md
-
-# 6. Dashboard-ready aggregates, each reconciled against its source view
-python src/export_bi.py
-
-# 7. Figures, the standalone page, and the GitHub Pages build
-python src/make_charts.py
+python src/profile_columns.py     # regenerates reports/data_dictionary.md
+python src/quality_report.py      # regenerates reports/quality_report.md
+python src/export_bi.py           # CSV aggregates for the dashboard
+python src/make_charts.py         # figures + the HTML pages
 ```
 
-A from-scratch rebuild is **byte-reproducible**: delete `data/olist.duckdb`, run
-the steps above, and every generated file — CSVs, figures, HTML, data dictionary,
-quality report — comes back identical. Verified, not assumed.
+The database lands at `data/olist.duckdb` and is rebuilt from scratch by the
+ingest step. Delete it, run the steps again, and every generated file comes back
+byte-identical — I check this before each commit, because getting it wrong once
+was how I found four sources of nondeterminism (unstable `ORDER BY` ties, a
+`DISTINCT … LIMIT` with no ordering, unordered table renders, and plotly's random
+div ids).
 
-`tests/test_report_figures.py` pins every headline number quoted in
-`reports/report.md`, so the report cannot silently drift away from the data: if
-one changes without the other, the suite fails.
+`tests/test_report_figures.py` pins the numbers quoted in `reports/report.md`.
+If the data or the report changes without the other, the suite fails.
 
-The DuckDB database lands at `data/olist.duckdb` and is rebuilt from scratch by
-step 2; nothing downstream depends on manual state.
+## How I worked with the data
 
-## Analytical conventions
+A few rules I held the whole project to, mostly because ignoring any of them is
+how e-commerce analyses go quietly wrong:
 
-These are the rules the whole project is held to:
-
-- **Grain is declared for every table.** Orders, items, payments and reviews
-  live at different grains; they are aggregated separately and joined only at
-  one-row-per-order grain, so amounts are never multiplied by a join.
-- **`customer_id` ≠ `customer_unique_id`.** The first is per-order, the second
-  is the person. Customer counts use the second; joins use the first.
-- **Item value, freight and payments are three different measures.** None of
-  them is profit, and the project never calls them that.
+- **Declare the grain of every table, then test it.** Orders, items, payments and
+  reviews all live at different grains. They get aggregated separately and joined
+  only at one-row-per-order, so no join can multiply an amount.
+- **`customer_id` is not `customer_unique_id`.** The first is per-order, the
+  second is the person. Customer counts use the second.
+- **Item value, freight and payments are three separate measures**, and none of
+  them is profit. There's no cost or refund data here.
 - **Every KPI states its filter and its denominator**, including how
-  cancellations, missing timestamps and duplicate reviews are handled, and how
-  many rows each rule removed.
-- **Every comparison reports its group sizes.**
-- **Associations are not causes.** Late deliveries correlating with low review
-  scores is reported as an association.
-- **A review of a multi-seller order is not attributed to one seller.**
+  cancellations, missing timestamps and duplicate reviews are handled.
+- **Every comparison shows its group sizes**, and rates carry 95% Wilson
+  intervals. A 21.5% rate on 396 orders shouldn't read like a 4.5% rate on
+  40,399. Six of 27 states turn out not to be distinguishable from the national
+  rate at all.
+- **Cohorts use a fixed observation window** and censored ones are flagged, so
+  the tail of the retention curve isn't mistaken for a decline.
+- **Associations aren't causes.** Late deliveries and low scores co-occur; the
+  report says so and stops there.
+- **A review of a multi-seller order isn't attributed to one seller.**
 
-- **Rates carry confidence intervals.** 95% Wilson score, so a 21.5% rate on 396
-  orders is not read like a 4.5% rate on 40,399. Six of 27 states turn out not to
-  be distinguishable from the national rate at all.
-- **Cohorts are measured over a fixed window and censoring is flagged**, not
-  hidden by a trailing decline that is really an artefact of observation time.
+Four of these caught mistakes I'd already made — a `review_id` I'd assumed was a
+primary key and isn't, a benchmark hardcoded at one denominator and drawn against
+another, a claim about category spread that was wrong in the flattering
+direction, and a category I dismissed as noise that the confidence interval says
+is real. They're in the commit history rather than quietly amended.
 
-Four of these rules caught real errors during development, each recorded in the
-commit history rather than quietly fixed: a `review_id` primary key that was not
-unique, a benchmark hardcoded at one denominator and drawn against another, a
-"within 1.3 points" claim about category spread that was false in the favourable
-direction, and a dismissal of one category as small-sample noise that the
-confidence interval contradicted.
+## AI assistance
 
-## AI usage
+I built this with Claude Code as a pair programmer. It scaffolded the repo,
+drafted a lot of the SQL and Python, and proposed the first cut of the KPI
+definitions. The analytical calls are mine: collapsing multiple reviews to the
+most recent one, measuring lateness at date rather than timestamp granularity,
+trimming the series to 2017-01–2018-08, refusing to attribute multi-seller
+reviews, and declining to put a revenue figure on the delay problem when the data
+can't support one.
 
-This project was developed with Claude Code as a pair-programming assistant.
-Claude scaffolded the repository, drafted SQL and Python, and proposed the KPI
-definitions; every figure quoted in `reports/` comes from a query that was
-actually executed against the local database, not from the assistant's prior
-knowledge of the dataset. Model Context Protocol (MCP) servers were used as
-follows:
+Every number in `reports/` comes from a query that was actually run against the
+local database. Nothing is quoted from a model's prior knowledge of this dataset,
+and the test suite exists partly to keep it that way.
 
-| MCP server | Status in this project |
-|---|---|
-| IDE (`executeCode`) | **Available but not used.** It requires an open notebook editor in VS Code; the session ran from a terminal, so the call returned `No active notebook editor found`. The notebook was instead generated and executed headlessly with `nbclient`, which stores real outputs in `notebooks/01_eda.ipynb`. Opening that notebook in VS Code makes this MCP server usable for live kernel work. |
-| IDE (`getDiagnostics`) | Available; same editor requirement. |
-| Claude Docs | Available; the report is written as a Markdown file in `reports/` instead. |
+On MCP servers, for anyone curious: the IDE `executeCode` server needs an open
+notebook editor in VS Code, and this was built from a terminal, so it never ran —
+`notebooks/01_eda.ipynb` was executed headlessly with `nbclient` instead and
+carries real outputs. There's no MCP server for DuckDB, Power BI or Kaggle; those
+are the Python library, the desktop app, and the Kaggle API client respectively.
 
-**There is no MCP server for DuckDB, Power BI or Kaggle.** Those are driven by
-the scripts in `src/`: `duckdb` as a Python library, the Kaggle API client for
-the download, and Power BI opened by hand against `dashboard/exports/`.
+## CI
 
-This table lists what was actually used rather than what would sound good. A
-tool that was available but did not run is recorded as not used.
+The dataset is CC BY-NC-SA and can't be committed, so the Olist-specific
+assertions skip when `data/olist.duckdb` is absent. What does run on every push
+is the whole SQL pipeline against [`tests/synthetic.py`](tests/synthetic.py) — a
+small made-up fixture that reproduces each defect shape from the real source: a
+multi-seller order, a doubly-reviewed order, a `review_id` shared across two
+orders, a split payment, a cancelled order with no items, a delivered order with
+no delivery date, a zip prefix with a leading zero.
 
-## Continuous integration
-
-The dataset is licensed CC BY-NC-SA and cannot be committed, so CI cannot run the
-Olist-specific assertions — they skip by design when `data/olist.duckdb` is
-absent. What CI *does* run is the entire SQL pipeline against
-[`tests/synthetic.py`](tests/synthetic.py), a small fabricated fixture that
-deliberately reproduces every defect shape in the real source: a multi-seller
-order, a doubly-reviewed order, a `review_id` shared across orders, a split
-payment, a cancelled order with no items, a delivered order with no delivery
-date, and a zip prefix with a leading zero.
-
-That suite asserts grain, money conservation and the handling of each defect, so
-a regression in the pipeline fails the build even though the real data is
-nowhere near it. The workflow also fails if any dataset file is ever tracked in
-git.
+That gives 31 tests covering grain, money conservation and defect handling
+without any licensed data present. The workflow also fails if a dataset file ever
+gets tracked in git.
 
 ## Licence
 
 Code: MIT, see [`LICENSE`](LICENSE). The dataset is published by Olist under
-CC BY-NC-SA 4.0 and is **not redistributed here** — no raw records are versioned.
-The aggregates under `dashboard/exports/` are derived group-level summaries and
-remain subject to the dataset's own terms, including its non-commercial
-restriction. See [`data/README.md`](data/README.md).
+CC BY-NC-SA 4.0 and isn't redistributed here — no raw records are versioned. The
+aggregates in `dashboard/exports/` are derived summaries and stay subject to the
+dataset's terms, including the non-commercial restriction. See
+[`data/README.md`](data/README.md).
+
+---
+
+*The Power BI `.pbix` isn't in the repo — I didn't have Power BI Desktop on the
+machine I built this on, so `dashboard/POWERBI_BUILD.md` is a build sheet with
+the layout, the DAX measures and the figures each card should show.*

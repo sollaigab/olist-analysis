@@ -9,11 +9,11 @@ Two outputs, deliberately:
   dashboard/olist_charts.html  self-contained interactive page with hover,
                                for anyone who will not install Power BI
 
-Design notes:
-  - One y-axis per chart. Two measures of different scale get two charts.
-  - Group sizes (n) are printed on the chart, never left to a footnote.
-  - Colors are a validated two-slot categorical palette; nothing is encoded by
-    color alone, and every multi-series chart is also directly labelled.
+Conventions:
+  - One y-axis per chart. Two measures at different scales get two charts.
+  - Group sizes on the chart, not in a footnote.
+  - Two-slot categorical palette, checked for colour-vision separation. Nothing
+    relies on colour alone; multi-series charts are directly labelled too.
 
 Usage:
     python src/make_charts.py            # both outputs
