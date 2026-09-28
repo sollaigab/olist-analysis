@@ -7,7 +7,7 @@ region, and the relationship between lateness and review scores.
 **Stack**: DuckDB + SQL · Python/pandas · pytest · Power BI (and a
 browser-viewable HTML/matplotlib alternative).
 
-> Status: work in progress. Milestone 1 of 5 complete (scaffold + ingest).
+> Status: work in progress. Milestones 1-4 of 5 complete (scaffold, model, KPIs, exploration and charts). Remaining: dashboard and report.
 
 ---
 
@@ -26,8 +26,8 @@ src/           ingest, build and export scripts
 sql/           00_staging -> 10_quality -> 20_intermediate -> 30_marts -> 40_kpi
 notebooks/     exploratory analysis
 tests/         grain, key-uniqueness and KPI reconciliation tests
-dashboard/     Power BI file, screenshots, and the CSV exports that feed it
-reports/       final report and figures
+dashboard/     exports/ (CSV aggregates), olist_charts.html, Power BI file, screenshots
+reports/       data dictionary, quality report, figures, final report
 ```
 
 ## Reproduction
@@ -39,14 +39,21 @@ python -m pip install -r requirements.txt
 # 2. Data (see data/README.md for the manual alternative)
 python src/ingest.py --download
 
-# 3. Build the modelled layers
-python src/build.py          # milestone 3
+# 3. Build the modelled layers (staging -> quality -> intermediate -> marts -> KPI)
+python src/build.py
 
 # 4. Tests
-python -m pytest -q          # milestone 2+
+python -m pytest -q
 
-# 5. Dashboard-ready aggregates
-python src/export_bi.py      # milestone 4
+# 5. Regenerate the generated documents
+python src/profile_columns.py   # reports/data_dictionary.md
+python src/quality_report.py    # reports/quality_report.md
+
+# 6. Dashboard-ready aggregates, each reconciled against its source view
+python src/export_bi.py
+
+# 7. Figures and the standalone interactive page
+python src/make_charts.py
 ```
 
 The DuckDB database lands at `data/olist.duckdb` and is rebuilt from scratch by
@@ -80,15 +87,18 @@ actually executed against the local database, not from the assistant's prior
 knowledge of the dataset. Model Context Protocol (MCP) servers were used as
 follows:
 
-| MCP server | Role in this project |
+| MCP server | Status in this project |
 |---|---|
-| IDE (`executeCode`) | Runs Python in a persistent Jupyter kernel, so the DuckDB connection and intermediate DataFrames survive between exploration steps |
-| IDE (`getDiagnostics`) | Static error/lint feedback on notebooks and `src/*.py` |
-| Claude Docs | Drafting surface for the final report |
+| IDE (`executeCode`) | **Available but not used.** It requires an open notebook editor in VS Code; the session ran from a terminal, so the call returned `No active notebook editor found`. The notebook was instead generated and executed headlessly with `nbclient`, which stores real outputs in `notebooks/01_eda.ipynb`. Opening that notebook in VS Code makes this MCP server usable for live kernel work. |
+| IDE (`getDiagnostics`) | Available; same editor requirement. |
+| Claude Docs | Available; the report is written as a Markdown file in `reports/` instead. |
 
-No MCP server exists for DuckDB or Power BI; those are driven locally by the
-scripts in `src/`. This table is deliberately accurate about which tools were
-actually used.
+**There is no MCP server for DuckDB, Power BI or Kaggle.** Those are driven by
+the scripts in `src/`: `duckdb` as a Python library, the Kaggle API client for
+the download, and Power BI opened by hand against `dashboard/exports/`.
+
+This table lists what was actually used rather than what would sound good. A
+tool that was available but did not run is recorded as not used.
 
 ## Licence
 

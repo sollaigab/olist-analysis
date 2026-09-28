@@ -1,0 +1,15 @@
+generated_on,file,source,rows,columns,reconciled_on
+2026-09-28,kpi_definitions.csv,mart.kpi_definitions,10,6,row count
+2026-09-28,sales_monthly.csv,mart.kpi_sales_monthly,20,12,items_value
+2026-09-28,delay_by_state.csv,mart.kpi_delay_by_state,27,12,n_orders
+2026-09-28,delay_by_category.csv,mart.kpi_delay_by_category,52,11,n_orders
+2026-09-28,category_priority.csv,mart.kpi_category_priority,52,13,n_late_orders
+2026-09-28,state_priority.csv,mart.kpi_state_priority,27,12,n_late_orders
+2026-09-28,reviews_by_punctuality.csv,mart.kpi_reviews_by_punctuality,2,9,n_orders
+2026-09-28,reviews_by_delay_bucket.csv,mart.kpi_reviews_by_delay_bucket,7,7,n_orders
+2026-09-28,review_coverage_monthly.csv,mart.kpi_review_coverage,20,5,n_reviewed
+2026-09-28,delay_distribution.csv,ad-hoc query in src/export_bi.py,81,2,row count
+2026-09-28,late_rate_monthly.csv,ad-hoc query in src/export_bi.py,20,7,row count
+2026-09-28,payment_mix_monthly.csv,ad-hoc query in src/export_bi.py,80,5,row count
+2026-09-28,delay_by_seller_state.csv,ad-hoc query in src/export_bi.py,13,6,row count
+2026-09-28,late_rate_state_monthly.csv,ad-hoc query in src/export_bi.py,306,5,row count
