@@ -1,13 +1,10 @@
-"""Render the report figures from the exported aggregates.
+"""Render the static report figures from the exported aggregates.
 
-Charts are built from dashboard/exports/*.csv, not from fresh queries, so the
-figures and the dashboard are guaranteed to show the same numbers. If a figure
-and a Power BI visual ever disagree, the cause is the visual, not the data.
+Charts are built from dashboard/exports/*.csv, not from fresh queries, so these
+figures, the interactive dashboard and Power BI all show the same numbers.
 
-Two outputs, deliberately:
-  reports/figures/*.png   static, for the written report
-  dashboard/olist_charts.html  self-contained interactive page with hover,
-                               for anyone who will not install Power BI
+Output: reports/figures/*.png, used by reports/report.md.
+The interactive version is a separate script, src/make_dashboard.py.
 
 Conventions:
   - One y-axis per chart. Two measures at different scales get two charts.
@@ -16,14 +13,11 @@ Conventions:
     relies on colour alone; multi-series charts are directly labelled too.
 
 Usage:
-    python src/make_charts.py            # both outputs
-    python src/make_charts.py --png      # figures only
-    python src/make_charts.py --html     # interactive page only
+    python src/make_charts.py
 """
 
 from __future__ import annotations
 
-import argparse
 import sys
 from pathlib import Path
 
@@ -405,137 +399,5 @@ def build_png() -> None:
         figure()
 
 
-# --- Interactive HTML ----------------------------------------------------
-
-def build_html(for_pages: bool = False) -> None:
-    """Interactive page with hover, for viewers without Power BI.
-
-    Two builds of the same page, because the two destinations want opposite
-    things:
-
-    * local (`dashboard/olist_charts.html`) inlines the whole plotly bundle, so
-      the file opens from disk with no network at all - 4.2 MB.
-    * GitHub Pages (`docs/index.html`) loads plotly from a CDN instead, which
-      takes the page to roughly 50 KB. GitHub does not render HTML from the
-      repository file view, so Pages is the only way a reviewer actually sees
-      this page rather than its source.
-    """
-    import plotly.graph_objects as go
-    import plotly.io as pio
-
-    out = (PROJECT_ROOT / "docs" / "index.html") if for_pages         else (PROJECT_ROOT / "dashboard" / "olist_charts.html")
-    out.parent.mkdir(parents=True, exist_ok=True)
-    plotly_js = "cdn" if for_pages else "inline"
-    blocks: list[str] = []
-    first = True
-
-    def add(fig: go.Figure, heading: str, note: str, div_id: str) -> None:
-        nonlocal first
-        fig.update_layout(
-            template="plotly_white", font=dict(family="system-ui, sans-serif", size=13, color=INK),
-            paper_bgcolor=SURFACE, plot_bgcolor=SURFACE, margin=dict(l=60, r=30, t=10, b=50),
-            hovermode="x unified", height=420, showlegend=False,
-        )
-        fig.update_xaxes(gridcolor=GRID, linecolor=AXIS, zeroline=False)
-        fig.update_yaxes(gridcolor=GRID, linecolor=AXIS, zeroline=False)
-        # div_id pinned: plotly defaults to a random UUID, which makes the
-        # output file differ on every run even when the data is identical.
-        html = pio.to_html(fig, full_html=False,
-                           include_plotlyjs=plotly_js if first else False,
-                           div_id=div_id, config={"displayModeBar": False})
-        first = False
-        blocks.append(f"<section><h2>{heading}</h2><p class='note'>{note}</p>{html}</section>")
-
-    sales = load("sales_monthly.csv")
-    fig = go.Figure(go.Scatter(
-        x=sales["purchase_month"], y=sales["items_value"], mode="lines+markers",
-        line=dict(color=SERIES_1, width=2), marker=dict(size=7),
-        hovertemplate="%{x|%b %Y}<br>Item value %{y:,.0f} BRL<extra></extra>"))
-    fig.update_yaxes(title="Item value, BRL", rangemode="tozero")
-    add(fig, "Merchandise value over time",
-        "Item value only, shipping excluded. Cancelled and unavailable orders removed. "
-        "Not revenue and not profit.", "chart-sales-monthly")
-
-    states = load("state_priority.csv").sort_values("late_rate_pct")
-    fig = go.Figure(go.Bar(
-        x=states["late_rate_pct"], y=states["customer_state"], orientation="h",
-        marker_color=[CRITICAL if r >= 12 else SERIES_1 for r in states["late_rate_pct"]],
-        customdata=states[["n_orders", "n_late_orders", "median_delivery_days"]],
-        hovertemplate="<b>%{y}</b><br>Late rate %{x:.2f}%<br>"
-                      "Orders %{customdata[0]:,}<br>Late orders %{customdata[1]:,}<br>"
-                      "Median delivery %{customdata[2]:.0f} days<extra></extra>"))
-    fig.update_layout(height=720, hovermode="closest")
-    fig.update_xaxes(title="Late rate")
-    add(fig, "Late rate by destination state",
-        "Denominator: delivered orders holding both a delivery date and an estimate. "
-        "Hover for the group size behind each rate.", "chart-late-by-state")
-
-    buckets = load("reviews_by_delay_bucket.csv")
-    fig = go.Figure(go.Bar(
-        x=[b.split(". ", 1)[1] for b in buckets["delay_bucket"]], y=buckets["pct_1_2_star"],
-        marker_color=[CRITICAL if "late" in b else SERIES_1 for b in buckets["delay_bucket"]],
-        customdata=buckets[["n_orders", "mean_review_score"]],
-        hovertemplate="<b>%{x}</b><br>1-2 star %{y:.2f}%<br>"
-                      "Orders %{customdata[0]:,}<br>Mean score %{customdata[1]:.2f}<extra></extra>"))
-    fig.update_layout(hovermode="closest")
-    fig.update_yaxes(title="Share rated 1 or 2 stars")
-    add(fig, "Review scores against delivery punctuality",
-        "Association, not causation. The same underlying problem can produce both the delay "
-        "and the low score.", "chart-reviews-by-delay")
-
-    dist = load("delay_distribution.csv")
-    fig = go.Figure(go.Bar(
-        x=dist["delay_days"], y=dist["n_orders"],
-        marker_color=[CRITICAL if d > 0 else SERIES_1 for d in dist["delay_days"]],
-        hovertemplate="%{x} days<br>%{y:,} orders<extra></extra>"))
-    fig.update_xaxes(title="Days from promised date (negative = early)")
-    fig.update_yaxes(title="Orders")
-    add(fig, "Distribution of delivery timing",
-        "Trimmed to plus or minus 40 days. The median order arrives 12 days early.", "chart-delay-distribution")
-
-    page = f"""<!doctype html>
-<html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Olist — delivery and satisfaction</title>
-<style>
-  body {{ margin:0; background:#f9f9f7; color:{INK};
-         font-family:system-ui,-apple-system,"Segoe UI",sans-serif; }}
-  main {{ max-width:1040px; margin:0 auto; padding:32px 20px 64px; }}
-  h1 {{ font-size:26px; margin:0 0 6px; }}
-  .lede {{ color:{INK_SECONDARY}; margin:0 0 28px; max-width:70ch; line-height:1.55; }}
-  section {{ background:{SURFACE}; border:1px solid rgba(11,11,11,0.10);
-             border-radius:10px; padding:20px 18px 8px; margin-bottom:22px; }}
-  h2 {{ font-size:17px; margin:0 0 4px; }}
-  .note {{ color:{INK_SECONDARY}; font-size:13px; margin:0 0 10px; max-width:75ch; line-height:1.5; }}
-  footer {{ color:{MUTED}; font-size:12px; margin-top:28px; line-height:1.6; }}
-</style></head><body><main>
-<h1>Olist — sales, delivery performance and satisfaction</h1>
-<p class="lede">Brazilian marketplace, 2017-01 to 2018-08. Every figure below is generated
-from <code>dashboard/exports/</code>, which is reconciled against the DuckDB model at export
-time. Group sizes appear on hover so no rate can be read without its denominator.</p>
-{''.join(blocks)}
-<footer>Item value, shipping and payments are three different measures and none of them is
-profit: this dataset contains no cost, tax, refund or commission data.<br>
-Relationships shown are associations, not causal effects.<br>
-Data: Olist Brazilian E-Commerce, CC BY-NC-SA 4.0. Only aggregates are published here.</footer>
-</main></body></html>"""
-
-    out.write_text(page, encoding="utf-8")
-    size_kb = out.stat().st_size / 1024
-    flavour = "plotly from CDN" if for_pages else "self-contained"
-    print(f"  wrote {out.relative_to(PROJECT_ROOT)} ({size_kb:,.0f} KB, {flavour})")
-
-
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--png", action="store_true", help="figures only")
-    parser.add_argument("--html", action="store_true", help="local interactive page only")
-    parser.add_argument("--pages", action="store_true", help="docs/index.html for GitHub Pages only")
-    args = parser.parse_args()
-    do_all = not (args.png or args.html or args.pages)
-    if args.png or do_all:
-        build_png()
-    if args.html or do_all:
-        build_html(for_pages=False)
-    if args.pages or do_all:
-        build_html(for_pages=True)
+    build_png()

@@ -461,7 +461,8 @@ python src/ingest.py --download
 python src/build.py
 python -m pytest -q
 python src/export_bi.py
-python src/make_charts.py
+python src/make_charts.py       # the figures used above
+python src/make_dashboard.py    # the interactive version of the same charts
 ```
 
 Definitions for every KPI — formula, filter, denominator and caveat — are in

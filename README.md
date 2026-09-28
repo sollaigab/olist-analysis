@@ -7,7 +7,12 @@ item value moved over time, where delivery delays concentrate, and how review
 scores relate to late deliveries.
 
 Built with DuckDB and SQL, Python/pandas for exploration, pytest for checks, and
-Power BI plus a browser-viewable HTML page for the visuals.
+a browser-viewable dashboard (plus a Power BI build sheet).
+
+The dashboard has four sections, a KPI row whose tiles each state their
+denominator, a state filter that cross-filters the logistics charts, a table view
+behind every chart, and a light/dark toggle. Every rate carries its group size on
+hover.
 
 **[Findings →](reports/report.md)** · **[Interactive charts →](https://leles.github.io/olist-analysis/)**
 
@@ -40,8 +45,8 @@ sql/           00_staging -> 10_quality -> 20_intermediate -> 30_marts -> 40_kpi
 notebooks/     exploratory analysis
 tests/         grain, KPI reconciliation, report figures, and a synthetic-data
                suite that runs in CI without the licensed dataset
-dashboard/     exports/ (CSV aggregates), olist_charts.html, Power BI build spec
-docs/          GitHub Pages build of the interactive page
+dashboard/     exports/ (CSV aggregates), olist_dashboard.html, Power BI build spec
+docs/          GitHub Pages build of the dashboard (plotly from CDN, ~170 KB)
 reports/       data dictionary, quality report, figures, final report
 ```
 
@@ -57,12 +62,14 @@ python -m pytest -q
 python src/profile_columns.py     # regenerates reports/data_dictionary.md
 python src/quality_report.py      # regenerates reports/quality_report.md
 python src/export_bi.py           # CSV aggregates for the dashboard
-python src/make_charts.py         # figures + the HTML pages
+python src/make_charts.py         # static figures for the report
+python src/make_dashboard.py      # interactive dashboard, local + Pages
 ```
 
 The database lands at `data/olist.duckdb` and is rebuilt from scratch by the
 ingest step. Delete it, run the steps again, and every generated file comes back
-byte-identical — I check this before each commit, because getting it wrong once
+byte-identical, apart from the generation date stamped in the dashboard footer —
+I check this before each commit, because getting it wrong once
 was how I found four sources of nondeterminism (unstable `ORDER BY` ties, a
 `DISTINCT … LIMIT` with no ordering, unordered table renders, and plotly's random
 div ids).

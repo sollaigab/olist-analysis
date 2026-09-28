@@ -9,8 +9,9 @@ Follow this sheet and the dashboard will show exactly the numbers in
 `reports/report.md` and `reports/figures/`, because all three read the same
 exports.
 
-> If you never install Power BI, `dashboard/olist_charts.html` already covers the
-> same ground interactively and opens in any browser.
+> If you never install Power BI, `dashboard/olist_dashboard.html` covers the same
+> ground interactively and opens in any browser — same four sections, same
+> numbers, same exports underneath.
 
 ---
 
