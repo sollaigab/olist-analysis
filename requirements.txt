@@ -7,9 +7,12 @@ pyarrow==17.0.0
 matplotlib==3.9.1
 plotly==7.0.0
 
-# Notebook
+# Notebook (nbformat + nbclient execute it headlessly, so the committed
+# notebook carries real outputs instead of empty cells)
 jupyter==1.1.1
 ipykernel==6.29.5
+nbformat==5.11.1
+nbclient==0.11.0
 
 # Testing
 pytest==9.1.1
