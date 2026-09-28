@@ -34,4 +34,4 @@ SOURCE_FILES: dict[str, str] = {
     "product_category_name_translation.csv": "category_translation",
 }
 
-SCHEMAS = ["raw", "stg", "int", "mart"]
+SCHEMAS = ["raw", "stg", "qa", "int", "mart"]
