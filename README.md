@@ -1,6 +1,6 @@
 # Olist — sales, delivery performance and customer satisfaction
 
-[![tests](https://github.com/leles/olist-analysis/actions/workflows/tests.yml/badge.svg)](https://github.com/leles/olist-analysis/actions/workflows/tests.yml)
+[![tests](https://github.com/sollaigab/olist-analysis/actions/workflows/tests.yml/badge.svg)](https://github.com/sollaigab/olist-analysis/actions/workflows/tests.yml)
 
 Analysis of ~100k orders from the Olist Brazilian marketplace (2016–2018): how
 item value moved over time, where delivery delays concentrate, and how review
@@ -14,7 +14,7 @@ denominator, a state filter that cross-filters the logistics charts, a table vie
 behind every chart, and a light/dark toggle. Every rate carries its group size on
 hover.
 
-**[Findings →](reports/report.md)** · **[Interactive charts →](https://leles.github.io/olist-analysis/)**
+**[Findings →](reports/report.md)** · **[Interactive charts →](https://sollaigab.github.io/olist-analysis/)**
 
 ![Monthly late rate](reports/figures/07_late_rate_monthly.png)
 
