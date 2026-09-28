@@ -1,0 +1,38 @@
+# --- Data: never version raw or derived datasets ---
+data/raw/
+data/processed/
+*.csv
+!dashboard/exports/*.csv
+*.zip
+
+# --- Local databases ---
+*.duckdb
+*.duckdb.wal
+*.db
+*.sqlite
+
+# --- Credentials ---
+.env
+.env.*
+kaggle.json
+*.pem
+*.key
+
+# --- Power BI (file can exceed GitHub limits; keep screenshots instead) ---
+*.pbix
+!dashboard/screenshots/*.png
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.ipynb_checkpoints/
+.pytest_cache/
+.ruff_cache/
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
