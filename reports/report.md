@@ -75,15 +75,14 @@ merchandising.
 
 ## Q2 — Which categories and areas concentrate delays?
 
-**Denominator first.** Of 99,441 orders, 96,478 reached `delivered` status, and
-96,470 of those carry both a delivery timestamp and an estimate. The 8 orders
-marked delivered with no delivery date are a data contradiction and are excluded
-from every delay figure. Inside the analysis window the measurable population is
-**96,203 orders**.
+**The denominator first.** Of 99,441 orders, 96,478 reached `delivered` status,
+and 96,470 of those carry both a delivery timestamp and an estimate. The 8 marked
+delivered with no delivery date contradict themselves, so I dropped them from
+every delay figure. Inside the analysis window that leaves **96,203 orders**.
 
-Lateness is measured at **date granularity**: `order_estimated_delivery_date`
-carries no time component, so comparing it to a 09:00 delivery timestamp would
-mark a same-day arrival as nine hours late. An order arriving on the promised
+I measure lateness at **date granularity**. `order_estimated_delivery_date` has
+no time component, so comparing it against a 09:00 delivery timestamp would call
+a same-day arrival nine hours late. An order that arrives on the promised
 calendar day is on time.
 
 ![Delay distribution](figures/04_delay_distribution.png)
@@ -137,19 +136,20 @@ events move the rate several points. **There is no category-level delay problem
 in this data**, and the total spread at volume — 3.8 points — is smaller than the
 gap between RJ and MG alone.
 
-Counting rule: an order is counted once per category it contains, so category
-order counts sum to more than the order total. This is correct for a
-multi-category basket and is stated rather than avoided by forcing a single
-category onto every order.
+A note on counting: I count an order once per category it contains, so these
+category totals add up to more than the order count. That is the right answer for
+a basket holding two categories, and I would rather say so than force a single
+category onto every order to make the arithmetic tidier.
 
 ### Which of these gaps are real?
 
-Showing group sizes is not the same as using them. AL's 21.46% rests on 396
-orders and SP's 4.50% on 40,399; printing both to two decimals implies a
-precision the smaller group does not have. Each rate below carries a **95% Wilson
-score interval** — chosen over the normal approximation because the normal
-interval misbehaves exactly here, at small n with proportions near zero, where it
-can even return a negative lower bound.
+I had been showing group sizes since the start, which is not the same as using
+them. AL's 21.46% rests on 396 orders and SP's 4.50% on 40,399, and printing both
+to two decimals implies a precision the smaller one does not have. So every rate
+below carries a **95% Wilson score interval**. I chose Wilson over the normal
+approximation because the normal interval misbehaves exactly where this data
+lives — small n, proportions near zero — and can even hand back a negative lower
+bound.
 
 ![State late rate with confidence intervals](figures/08_state_late_rate_ci.png)
 
@@ -225,11 +225,12 @@ performance.
 
 ## Q3 — How do reviews differ between on-time and late orders?
 
-Review coverage is **99.26%** (97,181 of 97,910 sale-eligible orders), so these
-scores describe nearly the whole customer base rather than a self-selected
-minority. Orders carrying more than one review (547) are collapsed to the most
-recent; 202 of those had disagreeing scores, so the collapse rule genuinely moves
-numbers and `score_spread` is retained in the model so the choice can be audited.
+Review coverage is **99.26%** (97,181 of 97,910 sale-eligible orders). I had
+expected a self-selected minority and it is nearly the whole customer base, which
+makes this section stronger than I assumed going in. Where an order carried more
+than one review (547 of them) I kept the most recent. 202 of those had
+disagreeing scores, so the rule genuinely moves numbers — I left `score_spread`
+in the model so anyone can check how much.
 
 | outcome | orders | mean score | 1–2 ★ | 5 ★ | left a comment |
 |---|---|---|---|---|---|
@@ -309,10 +310,10 @@ lost — no cancellation-after-delay or refund data exists to support a loss cla
 
 ## Beyond the brief — repeat purchasing
 
-The four questions above concern orders. This section concerns *people*, and it
-is the reason `customer_unique_id` exists in the data model: there are 99,441
-`customer_id` values but only 96,096 people behind them, so counting the wrong
-one inflates the customer base by the repeat rate.
+The four questions above are about orders. This one is about people, and it is
+why `customer_unique_id` is in the model at all: there are 99,441 `customer_id`
+values but only 96,096 people behind them, so counting the wrong one inflates the
+customer base by the repeat rate.
 
 ![Cohort retention](figures/09_cohort_retention.png)
 
@@ -327,14 +328,13 @@ one inflates the customer base by the repeat rate.
 lived a full 90 days, **2.03%** of new customers ordered again within 90 days
 (1,560 of 76,845). The highest complete cohort reaches 3.19%; the lowest 1.03%.
 
-**Right censoring is handled explicitly.** The last purchase in the dataset is
-2018-09-03, so a customer who first bought in August 2018 had days to return
-while one from January 2017 had eighteen months. Comparing them directly would
-manufacture a decline that is purely an artefact of observation time. Every
-cohort here is measured over the same fixed 90-day window, and the three cohorts
-that have not lived through one are drawn dashed and flagged `is_complete =
-false` rather than quietly shown or quietly dropped. Their apparent 1.01%, 1.08%
-and 0.48% are censoring, not collapse.
+**The censoring needs handling, or this chart lies.** The last purchase in the
+data is 2018-09-03, so someone who first bought in August 2018 had days to come
+back while a January 2017 customer had eighteen months. Compare them directly and
+you manufacture a decline that is really just observation time. So every cohort
+here is measured over the same fixed 90-day window, and the three that have not
+lived through one are drawn dashed and flagged `is_complete = false` — shown, but
+not quotable. Their 1.01%, 1.08% and 0.48% are censoring, not collapse.
 
 This changes how to read the rest. At a 2% repeat rate the marketplace runs on
 acquisition, not retention, which cuts both ways for the delivery
@@ -348,8 +348,8 @@ version of that argument. It also means there's no lifetime value to calculate:
 
 ## Recommendations
 
-Each one names the evidence, what it would change, and how you'd know if it
-worked.
+Each one names the evidence behind it, what it would change, and how you would
+know whether it worked.
 
 ### 1. Make the delivery promise state-aware rather than uniform
 

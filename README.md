@@ -150,7 +150,3 @@ dataset's terms, including the non-commercial restriction. See
 [`data/README.md`](data/README.md).
 
 ---
-
-*The Power BI `.pbix` isn't in the repo — I didn't have Power BI Desktop on the
-machine I built this on, so `dashboard/POWERBI_BUILD.md` is a build sheet with
-the layout, the DAX measures and the figures each card should show.*
